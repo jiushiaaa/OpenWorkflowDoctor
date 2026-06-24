@@ -7,7 +7,7 @@ Target length: 3 minutes.
 Run:
 
 ```bash
-npm run dev -w apps/web -- -p 3001
+npx next dev apps/web -p 3001
 ```
 
 Open `http://localhost:3001`.
