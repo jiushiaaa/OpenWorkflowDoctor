@@ -1,0 +1,74 @@
+{
+  "name": "Messy Legacy Workflow",
+  "nodes": [
+    {
+      "name": "Legacy Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "parameters": {
+        "path": "legacy-sync",
+        "httpMethod": "POST"
+      }
+    },
+    {
+      "id": "crm-update",
+      "name": "CRM Update",
+      "type": "n8n-nodes-base.postgres",
+      "parameters": {
+        "operation": "update",
+        "table": "customers"
+      }
+    },
+    {
+      "id": "notify",
+      "name": "Send Email Notification",
+      "type": "n8n-nodes-base.emailSend",
+      "parameters": {
+        "to": "ops@example.test",
+        "subject": "Legacy sync completed"
+      }
+    },
+    {
+      "id": "failure-log",
+      "name": "CRM Update Failure Log",
+      "type": "custom.log",
+      "parameters": {
+        "event": "crm_update_failed"
+      }
+    },
+    {
+      "id": "orphan",
+      "name": "Disconnected Old Helper",
+      "type": "vendor.legacyHelper",
+      "parameters": {
+        "note": "Kept here to show disconnected subgraph diagnostics"
+      }
+    }
+  ],
+  "connections": {
+    "Legacy Webhook": {
+      "main": [
+        [
+          {
+            "node": "CRM Update",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CRM Update": {
+      "main": [
+        [
+          {
+            "node": "Send Email Notification",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Broken Source": {
+      "main": "malformed"
+    }
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "name": "Workflow With Isolated Node",
+  "nodes": [
+    {
+      "id": "manual",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "parameters": {}
+    },
+    {
+      "id": "email",
+      "name": "Send Email",
+      "type": "n8n-nodes-base.gmail",
+      "parameters": {
+        "operation": "send"
+      }
+    },
+    {
+      "id": "orphan",
+      "name": "Unused HTTP Call",
+      "type": "n8n-nodes-base.httpRequest",
+      "parameters": {
+        "url": "https://api.example.test/unused"
+      }
+    }
+  ],
+  "connections": {
+    "Manual Trigger": {
+      "main": [
+        [
+          {
+            "node": "Send Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

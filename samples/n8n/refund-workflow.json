@@ -1,0 +1,96 @@
+{
+  "name": "Refund Workflow",
+  "nodes": [
+    {
+      "id": "webhook",
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "parameters": {
+        "path": "refund",
+        "httpMethod": "POST"
+      }
+    },
+    {
+      "id": "lookup",
+      "name": "Lookup Order",
+      "type": "n8n-nodes-base.httpRequest",
+      "parameters": {
+        "url": "https://api.example.test/orders/{{$json.orderId}}",
+        "method": "GET"
+      }
+    },
+    {
+      "id": "branch",
+      "name": "IF refund amount > 500",
+      "type": "n8n-nodes-base.if",
+      "parameters": {
+        "conditions": {
+          "number": [
+            {
+              "value1": "={{$json.amount}}",
+              "operation": "larger",
+              "value2": 500
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "approval",
+      "name": "Manual Approval",
+      "type": "n8n-nodes-base.manualTrigger",
+      "parameters": {}
+    },
+    {
+      "id": "refund",
+      "name": "Stripe Refund",
+      "type": "n8n-nodes-base.stripe",
+      "parameters": {
+        "resource": "charge",
+        "operation": "refund"
+      }
+    }
+  ],
+  "connections": {
+    "Webhook Trigger": {
+      "main": [
+        [
+          {
+            "node": "Lookup Order",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Lookup Order": {
+      "main": [
+        [
+          {
+            "node": "IF refund amount > 500",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF refund amount > 500": {
+      "main": [
+        [
+          {
+            "node": "Manual Approval",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Stripe Refund",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

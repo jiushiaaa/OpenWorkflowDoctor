@@ -1,0 +1,104 @@
+{
+  "name": "Content Automation Workflow",
+  "nodes": [
+    {
+      "id": "webhook",
+      "name": "Content Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "parameters": {
+        "path": "content-publish",
+        "httpMethod": "POST",
+        "dedupeKey": "={{$json.requestId}}"
+      }
+    },
+    {
+      "id": "fetch-brief",
+      "name": "Fetch Brief",
+      "type": "n8n-nodes-base.httpRequest",
+      "parameters": {
+        "url": "https://cms.example.test/briefs/{{$json.briefId}}",
+        "method": "GET",
+        "timeout": 30000
+      }
+    },
+    {
+      "id": "route",
+      "name": "Switch Channel",
+      "type": "n8n-nodes-base.switch",
+      "parameters": {
+        "numberOfOutputs": 3
+      }
+    },
+    {
+      "id": "email",
+      "name": "Send Editorial Email",
+      "type": "n8n-nodes-base.emailSend",
+      "parameters": {
+        "to": "editor@example.test",
+        "subject": "New content brief",
+        "sendLog": "={{$json.messageId}}"
+      }
+    },
+    {
+      "id": "audit",
+      "name": "Content Success Audit Log",
+      "type": "custom.audit",
+      "parameters": {
+        "event": "content_publish_requested"
+      }
+    }
+  ],
+  "connections": {
+    "Content Webhook": {
+      "main": [
+        [
+          {
+            "node": "Fetch Brief",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Brief": {
+      "main": [
+        [
+          {
+            "node": "Switch Channel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch Channel": {
+      "main": [
+        [
+          {
+            "node": "Send Editorial Email",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Content Success Audit Log",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Send Editorial Email": {
+      "main": [
+        [
+          {
+            "node": "Content Success Audit Log",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

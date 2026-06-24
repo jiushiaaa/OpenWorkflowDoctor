@@ -1,0 +1,10 @@
+node_modules/
+.next/
+dist/
+coverage/
+*.tsbuildinfo
+*.log
+apps/web/.*-smoke.png
+.env
+.env.*
+!.env.example
