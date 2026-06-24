@@ -14,6 +14,21 @@ export default tseslint.config(
     ]
   },
   {
+    files: ["scripts/**/*.mjs"],
+    languageOptions: {
+      globals: {
+        AbortController: "readonly",
+        clearTimeout: "readonly",
+        console: "readonly",
+        DOMException: "readonly",
+        fetch: "readonly",
+        process: "readonly",
+        Response: "readonly",
+        setTimeout: "readonly"
+      }
+    }
+  },
+  {
     files: ["apps/web/**/*.{js,jsx,ts,tsx}"],
     plugins: {
       "@next/next": nextPlugin

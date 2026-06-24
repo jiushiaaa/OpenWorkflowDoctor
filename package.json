@@ -9,6 +9,7 @@
   ],
   "scripts": {
     "test": "vitest run",
+    "test:ai:manual": "node scripts/manual-ai-patch-smoke.mjs",
     "test:e2e": "playwright test",
     "typecheck": "tsc -b && npm run typecheck -w apps/web",
     "lint": "eslint .",
