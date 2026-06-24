@@ -2,6 +2,35 @@
 
 OpenWorkflowDoctor is a Workflow Reliability IDE for existing n8n workflows. The MVP reads exported workflow JSON, converts it into a deterministic `WorkflowIR`, detects static risks, proposes structured patches, and verifies whether changes are safe to accept. It does not connect to production n8n, execute workflows, read credentials, or trigger external side effects.
 
+## v0.3 Local Workspace Boundary
+
+v0.3 adds a local browser workspace around the deterministic doctor flow. A workspace is only local IDE state for imported exported n8n JSON files. It is not a connected n8n project, not a runtime, and not a collaboration space.
+
+Workspace data is split deliberately:
+
+- `localStorage` keeps small workbench settings: language, theme, and local AI provider configuration.
+- IndexedDB keeps workspace metadata, Workflow Documents, and Review Packet Artifacts.
+
+The workspace stores secret-safe `WorkflowIR` and derived review state. It does not store raw imported n8n JSON, credentials, production API connections, workflow execution state, or n8n-importable patches.
+
+Core workspace concepts:
+
+- `LocalWorkspace`: local container with a stable id, active workflow document id, and ordered workflow document ids.
+- `WorkflowDocument`: one imported workflow review session containing original `WorkflowIR`, patch request, latest `DoctorReport`, UI state, human review draft, and packet artifact ids.
+- `ReviewPacketArtifact`: local saved/exported instance of a canonical `DoctorReviewPacket` for one workflow document.
+
+Review packets remain per workflow. The exported packet shape remains `DoctorReviewPacket`; the artifact wrapper exists only for local workspace bookkeeping.
+
+Active workflow switching behaves like switching files in a lightweight IDE:
+
+1. Persist current document state.
+2. Set `activeWorkflowDocumentId`.
+3. Load the selected Workflow Document.
+4. Restore title, graph, selected node, active tab, patch request, latest report, review mode, and human review draft.
+5. Do not rerun Doctor automatically.
+
+If the patch request changes after a report exists, the document marks `latestReportState` as `stale`. The user must rerun Doctor before the report, verifier, and review packet reflect the new request.
+
 ## v0.1 Demo Boundary
 
 v0.1 is a local static analysis and review artifact demo:
@@ -74,6 +103,8 @@ The UI-facing deterministic entry point is `createDoctorReport(rawWorkflow, requ
 `createDoctorReviewPacket(report)` converts a `DoctorReport` into a serializable handoff artifact with a stable review target fingerprint, before/after risk counts, resolved/remaining/introduced issue ids, readable patch diff, structured operations, patched WorkflowIR, verifier output, an acceptance checklist derived from verifier gates, an optional human review decision, and `humanReviewValidation`.
 
 `apps/web` uses these entry points directly for the first workbench: JSON import, graph canvas, node inspector, summary, risk list, patch proposal, reviewed patched preview, verification report, acceptance checklist, human review decision, and local JSON exports.
+
+In v0.3, `apps/web` wraps that same deterministic flow in a local workspace layer. Importing JSON or loading a sample creates a Workflow Document from parsed `WorkflowIR`. Running Doctor persists the latest `DoctorReport` on that document. Exporting a review packet saves a Review Packet Artifact for that document and downloads the canonical packet JSON.
 
 LLMs must never mutate raw n8n JSON. Builder output must be structured and reviewable. Verifier output is separate from patch generation. Verifier gates separate unresolved repairable risks from inherent high-risk side effects that require human acceptance.
 Human review decisions are stored separately from verifier status so the artifact can show both what the system proved and what a reviewer chose. A human `accept` decision is considered internally consistent only when every non-pass acceptance checklist item is explicitly confirmed; otherwise `humanReviewValidation` remains `hold`.

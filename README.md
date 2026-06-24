@@ -4,6 +4,23 @@ OpenWorkflowDoctor is a Workflow Reliability IDE for existing n8n workflows. It 
 
 The MVP is deliberately not a workflow builder and not a workflow runtime. It does not connect to production n8n, execute workflows, read credentials, or trigger external side effects.
 
+## v0.3 Release Boundary
+
+OpenWorkflowDoctor v0.3 adds a local browser workspace for multiple imported workflow reviews. The workspace is lightweight IDE state, not a connected n8n project.
+
+- Workspace data is stored locally in this browser with IndexedDB.
+- Settings, language, theme, and local AI provider settings remain in browser `localStorage`.
+- Importing JSON creates a local Workflow Document from secret-safe `WorkflowIR`.
+- Bundled samples can be loaded into the workspace as normal Workflow Documents.
+- Multiple Workflow Documents can coexist and be switched from Workflow Explorer.
+- Switching active workflows restores the workflow title, graph, selected node, active tab, patch request, latest report, review mode, and human review draft.
+- Switching workflows does not rerun Doctor automatically.
+- If the patch request changes after a report exists, the report is marked stale until Doctor is rerun.
+- Review Packet artifacts are saved per workflow when packets are exported.
+- Review Packet export shape remains the canonical `DoctorReviewPacket`; it is not a workspace export and not n8n-importable JSON.
+- Clearing workspace data removes workflow documents and packet artifacts but does not clear language, theme, or AI provider settings.
+- The product remains local-first only: no production n8n connection, no workflow execution, no credential access, no n8n-importable patch export, no AI Patch Agent, and no AI Verifier Agent.
+
 ## v0.2 Release Boundary
 
 OpenWorkflowDoctor v0.2 freezes the local Workflow Doctor with i18n, Settings, and an advisory AI Explainer. The deterministic v0.1 trust model remains the source of truth.
@@ -59,6 +76,10 @@ The first web workbench lives in `apps/web`.
 Implemented:
 
 - Import an exported n8n workflow JSON in the browser.
+- Store multiple imported workflows as local Workflow Documents in an IndexedDB-backed Workspace.
+- Switch active workflows from Workflow Explorer without rerunning Doctor.
+- Load bundled sample workflows into the local Workspace.
+- Persist patch request, latest Doctor report, selected node, active tab, review mode, human review draft, and review packet artifact history per workflow.
 - Render a React Flow workflow graph from the deterministic `WorkflowViewModel`.
 - Select graph nodes and inspect node-level risks.
 - Show workflow summary, static risks, structured patch proposal, verification gates, and acceptance recommendation.
@@ -69,6 +90,7 @@ Implemented:
 - Record a local human review decision (`accept`, `hold`, or `reject`) in exported artifacts without overwriting the verifier recommendation.
 - Require explicit confirmation of every non-pass checklist item before the UI allows a human `accept` decision; exported packets also include `humanReviewValidation` for this guard.
 - Add a stable review target fingerprint to the UI and review packet so reviewers can identify the exact workflow, patch, verifier result, and checklist being accepted.
+- Keep review target fingerprints scoped to the technical per-workflow review target; local artifact ids provide workspace uniqueness.
 - Show resolved, remaining, and introduced issue ids in the UI and review packet so reviewers can inspect the concrete risk delta, not just counts.
 - Redact sensitive parameter previews such as API keys, Authorization headers, passwords, tokens, and secrets before they enter WorkflowIR, UI, or exported artifacts.
 - Parse exported n8n workflow JSON into secret-safe `WorkflowIR`.
@@ -138,6 +160,9 @@ npm run lint
 
 ## Future Roadmap
 
+- Workspace export/import backup files after the local document model stabilizes.
+- Review packet comparison, signing, or stronger tamper-evidence.
+- Cross-workflow search and risk dashboards.
 - Broader n8n fixture coverage and node catalog awareness.
 - Optional AI patch agents only after they emit the same validated structured contracts and remain reviewable before apply.
 - Richer path analysis and risk explanations.

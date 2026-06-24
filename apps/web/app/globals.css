@@ -216,6 +216,85 @@ h3 {
   background: var(--surface-subtle);
 }
 
+.workflow-explorer {
+  display: grid;
+  gap: 10px;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 14px;
+}
+
+.workflow-explorer__list {
+  display: grid;
+  gap: 6px;
+  max-height: 220px;
+  margin: 0;
+  padding: 0;
+  overflow: auto;
+  list-style: none;
+}
+
+.workflow-explorer__list button {
+  display: grid;
+  gap: 4px;
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  padding: 9px;
+  background: var(--surface);
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+}
+
+.workflow-explorer__list button:hover,
+.workflow-explorer__list button.is-selected {
+  border-color: var(--accent);
+  background: #eff6ff;
+}
+
+.workflow-explorer__list strong {
+  overflow-wrap: anywhere;
+  font-size: 13px;
+  line-height: 1.25;
+}
+
+.workflow-explorer__list small {
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.25;
+}
+
+.sample-list {
+  display: grid;
+  gap: 6px;
+}
+
+.sample-list > span {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.sample-list button,
+.workflow-explorer .section-title-row button {
+  min-height: 30px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0 9px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.sample-list button:hover,
+.workflow-explorer .section-title-row button:hover {
+  border-color: var(--border-strong);
+  background: var(--surface-subtle);
+}
+
 .workbench-actions {
   display: flex;
   align-items: center;
@@ -429,6 +508,30 @@ h3 {
   margin-bottom: 12px;
   font-size: 28px;
   overflow-wrap: anywhere;
+}
+
+.empty-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.empty-actions button {
+  min-height: 34px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0 10px;
+  background: var(--surface-strong);
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.empty-actions .secondary-button {
+  background: var(--surface);
+  color: var(--text);
 }
 
 .welcome-checklist {

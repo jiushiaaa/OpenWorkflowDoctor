@@ -47,9 +47,21 @@ import {
   type ThemeMode,
   type WorkbenchSettings
 } from "./lib/settings";
+import { WorkflowExplorer, type WorkflowExplorerItem } from "./components/WorkflowExplorer";
+import { SAMPLE_WORKFLOWS, type SampleWorkflowCatalogItem } from "./lib/sample-workflows";
+import {
+  createEmptyHumanReview,
+  createIndexedDbWorkspaceRepository,
+  createReviewPacketArtifact,
+  createWorkflowDocumentFromWorkflowIr,
+  type ReviewMode,
+  type ReviewPacketArtifact,
+  type WorkflowDocument,
+  type WorkspaceConsoleTab,
+  type WorkspaceRepository
+} from "./lib/workspace-store";
 
-type ReviewMode = "original" | "patched";
-type ConsoleTab = "summary" | "risks" | "ai" | "patch" | "verification" | "packet" | "logs";
+type ConsoleTab = WorkspaceConsoleTab;
 type AiExplainerStatus = "idle" | "loading" | "ready" | "error";
 type SettingsTestStatus = "idle" | "testing" | "ready" | "fallback" | "missing-key" | "cleared";
 type CommandItem = {
@@ -115,16 +127,11 @@ const nodeTypes = {
 
 export default function Home() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
-  const [request, setRequest] = useState(defaultRequest);
-  const [workflowInput, setWorkflowInput] = useState<WorkflowIR | null>(null);
-  const [report, setReport] = useState<DoctorReport | null>(null);
-  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
-  const [reviewMode, setReviewMode] = useState<ReviewMode>("original");
-  const [activeTab, setActiveTab] = useState<ConsoleTab>("summary");
-  const [humanDecision, setHumanDecision] = useState<HumanReviewDecision>("undecided");
-  const [humanReviewNote, setHumanReviewNote] = useState("");
-  const [humanDecidedAt, setHumanDecidedAt] = useState<string | undefined>();
-  const [confirmedChecklistItemIds, setConfirmedChecklistItemIds] = useState<string[]>([]);
+  const repositoryRef = useRef<WorkspaceRepository | null>(null);
+  const [workspaceLoaded, setWorkspaceLoaded] = useState(false);
+  const [workflowDocuments, setWorkflowDocuments] = useState<WorkflowDocument[]>([]);
+  const [activeWorkflowDocumentId, setActiveWorkflowDocumentId] = useState<string | null>(null);
+  const [activeReviewPacketArtifacts, setActiveReviewPacketArtifacts] = useState<ReviewPacketArtifact[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [settings, setSettings] = useState<WorkbenchSettings>(defaultWorkbenchSettings);
   const [settingsLoaded, setSettingsLoaded] = useState(false);
@@ -136,7 +143,6 @@ export default function Home() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [settingsTestStatus, setSettingsTestStatus] = useState<SettingsTestStatus>("idle");
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
-  const [packetExported, setPacketExported] = useState(false);
   const [aiResult, setAiResult] = useState<WorkflowExplanationResult | null>(null);
   const [aiStatus, setAiStatus] = useState<AiExplainerStatus>("idle");
   const [aiError, setAiError] = useState<string | null>(null);
@@ -144,19 +150,28 @@ export default function Home() {
   const aiProviderStatus = getAiProviderStatus(settings.ai);
   const resolvedTheme = settings.theme === "system" ? systemTheme : settings.theme;
 
+  const activeDocument = useMemo(
+    () => workflowDocuments.find((document) => document.id === activeWorkflowDocumentId) ?? null,
+    [activeWorkflowDocumentId, workflowDocuments]
+  );
+  const workflowInput = activeDocument?.originalWorkflowIr ?? null;
+  const report = activeDocument?.latestReport ?? null;
+  const request = activeDocument?.currentRequest ?? defaultRequest;
+  const selectedNodeId = activeDocument?.selectedNodeId ?? null;
+  const reviewMode = activeDocument?.reviewMode ?? "original";
+  const activeTab = activeDocument?.activeTab ?? "summary";
+  const isReportStale = activeDocument?.latestReportState === "stale";
   const humanReview = useMemo<HumanReview>(() => {
-    const nextHumanReview: HumanReview = {
-      decision: humanDecision,
-      reviewerNote: humanReviewNote.trim(),
-      confirmedChecklistItemIds: humanDecision === "accepted" ? confirmedChecklistItemIds : []
+    const draft = activeDocument?.humanReviewDraft ?? createEmptyHumanReview();
+    return {
+      ...draft,
+      reviewerNote: draft.reviewerNote.trim(),
+      confirmedChecklistItemIds: draft.decision === "accepted" ? draft.confirmedChecklistItemIds : []
     };
-
-    if (humanDecidedAt) {
-      nextHumanReview.decidedAt = humanDecidedAt;
-    }
-
-    return nextHumanReview;
-  }, [confirmedChecklistItemIds, humanDecidedAt, humanDecision, humanReviewNote]);
+  }, [activeDocument]);
+  const humanDecision = humanReview.decision;
+  const humanReviewNote = activeDocument?.humanReviewDraft.reviewerNote ?? "";
+  const confirmedChecklistItemIds = activeDocument?.humanReviewDraft.confirmedChecklistItemIds ?? [];
 
   const reviewPacket = useMemo(
     () => (report ? createDoctorReviewPacket(report, undefined, humanReview) : null),
@@ -173,11 +188,32 @@ export default function Home() {
   const humanReviewAccepted =
     reviewPacket?.humanReview.decision === "accepted" &&
     reviewPacket.humanReviewValidation.status === "pass";
-  const packetExportStatus = packetExported
+  const currentPacketArtifact = reviewPacket
+    ? activeReviewPacketArtifacts.find(
+        (artifact) => artifact.reviewTargetFingerprint === reviewPacket.reviewTargetFingerprint
+      )
+    : null;
+  const packetExportStatus = currentPacketArtifact?.exportedAt
     ? t("sidebar.exported")
     : humanReviewAccepted
       ? t("sidebar.readyToExport")
       : t("sidebar.notExported");
+  const explorerItems = useMemo<WorkflowExplorerItem[]>(
+    () =>
+      workflowDocuments.map((document) => ({
+        id: document.id,
+        name: document.displayName,
+        sourceLabel: document.sourceLabel,
+        statusLabel: getWorkflowDocumentStatusLabel(document, t),
+        humanReviewLabel: getHumanDecisionLabel(document.humanReviewDraft.decision, t),
+        packetLabel:
+          document.reviewPacketArtifactIds.length > 0
+            ? `${document.reviewPacketArtifactIds.length} ${t("explorer.packetCount")}`
+            : t("explorer.noPackets"),
+        isActive: document.id === activeWorkflowDocumentId
+      })),
+    [activeWorkflowDocumentId, t, workflowDocuments]
+  );
 
   const activeWorkflow =
     report && reviewMode === "patched"
@@ -229,6 +265,7 @@ export default function Home() {
       id: viewNode.id,
       type: "doctor",
       position: viewNode.position,
+      selected: viewNode.id === selectedNodeId,
       data: {
         ...viewNode,
         issues: issuesByNode.get(viewNode.id) ?? [],
@@ -236,7 +273,7 @@ export default function Home() {
         severityLabel: viewNode.highestSeverity ? getSeverityLabel(viewNode.highestSeverity, t) : t("inspector.clear")
       }
     }));
-  }, [activeView, issuesByNode, t]);
+  }, [activeView, issuesByNode, selectedNodeId, t]);
 
   const flowEdges = useMemo<Edge[]>(() => {
     if (!activeView) {
@@ -267,24 +304,75 @@ export default function Home() {
     canExport: Boolean(humanReviewAccepted)
   });
 
+  async function loadWorkspaceSnapshot(nextActiveDocumentId?: string | null) {
+    const repository = repositoryRef.current;
+    if (!repository) {
+      return;
+    }
+
+    const workspace = await repository.getWorkspace();
+    const documents = await repository.listWorkflowDocuments();
+    const activeId =
+      nextActiveDocumentId !== undefined
+        ? nextActiveDocumentId
+        : workspace.activeWorkflowDocumentId;
+    const nextActiveId = activeId && documents.some((document) => document.id === activeId)
+      ? activeId
+      : documents[0]?.id ?? null;
+
+    setWorkflowDocuments(documents);
+    setActiveWorkflowDocumentId(nextActiveId);
+    setActiveReviewPacketArtifacts(
+      nextActiveId ? await repository.listReviewPacketArtifacts(nextActiveId) : []
+    );
+  }
+
+  function updateActiveDocument(updater: (document: WorkflowDocument) => WorkflowDocument) {
+    if (!activeDocument) {
+      return;
+    }
+
+    const repository = repositoryRef.current;
+    const nextDocument = {
+      ...updater(activeDocument),
+      updatedAt: new Date().toISOString()
+    };
+
+    setWorkflowDocuments((current) =>
+      current.map((document) => (document.id === nextDocument.id ? nextDocument : document))
+    );
+    void repository?.saveWorkflowDocument(nextDocument).catch((saveError) => {
+      setError(saveError instanceof Error ? saveError.message : "Unable to save workflow document.");
+    });
+  }
+
   async function importWorkflow(file: File | undefined) {
     if (!file) {
       return;
     }
 
     try {
+      const repository = repositoryRef.current;
+      if (!repository) {
+        throw new Error("Local workspace storage is not ready.");
+      }
       const text = await file.text();
       const json = JSON.parse(text) as unknown;
       const parsedWorkflow = parseN8nWorkflow(json);
-      setWorkflowInput(parsedWorkflow);
-      setReport(null);
-      setReviewMode("original");
-      setActiveTab("summary");
-      setSelectedNodeId(parsedWorkflow.nodes[0]?.id ?? null);
-      setPacketExported(false);
-      resetHumanReview();
+      const document = createWorkflowDocumentFromWorkflowIr({
+        workflow: parsedWorkflow,
+        sourceKind: "imported-file",
+        sourceLabel: file.name
+      });
+
+      await repository.saveWorkflowDocument(document);
+      await repository.setActiveWorkflowDocument(document.id);
+      await loadWorkspaceSnapshot(document.id);
       resetAiExplainer();
       setError(null);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
     } catch (importError) {
       setError(
         importError instanceof Error
@@ -294,18 +382,89 @@ export default function Home() {
     }
   }
 
-  function rerunDoctor() {
-    if (!workflowInput) {
+  async function loadSampleWorkflow(sample: SampleWorkflowCatalogItem) {
+    try {
+      const repository = repositoryRef.current;
+      if (!repository) {
+        throw new Error("Local workspace storage is not ready.");
+      }
+
+      const parsedWorkflow = parseN8nWorkflow(sample.workflow);
+      const document = createWorkflowDocumentFromWorkflowIr({
+        workflow: parsedWorkflow,
+        sourceKind: "sample",
+        sourceLabel: sample.filename
+      });
+
+      await repository.saveWorkflowDocument(document);
+      await repository.setActiveWorkflowDocument(document.id);
+      await loadWorkspaceSnapshot(document.id);
+      resetAiExplainer();
+      setError(null);
+    } catch (sampleError) {
+      setError(sampleError instanceof Error ? sampleError.message : "Unable to load sample workflow.");
+    }
+  }
+
+  async function selectWorkflowDocument(workflowDocumentId: string) {
+    const repository = repositoryRef.current;
+    if (!repository) {
       return;
     }
 
-    const nextReport = createDoctorReportFromWorkflow(workflowInput, request);
-    setReport(nextReport);
-    setReviewMode("original");
-    setActiveTab("risks");
-    setSelectedNodeId(nextReport.view.nodes[0]?.id ?? null);
-    setPacketExported(false);
-    resetHumanReview();
+    await repository.setActiveWorkflowDocument(workflowDocumentId);
+    await loadWorkspaceSnapshot(workflowDocumentId);
+    resetAiExplainer();
+    setError(null);
+  }
+
+  function updatePatchRequest(nextRequest: string) {
+    updateActiveDocument((document) => ({
+      ...document,
+      currentRequest: nextRequest,
+      latestReportState: document.latestReport ? "stale" : document.latestReportState
+    }));
+  }
+
+  function updateActiveTab(nextTab: ConsoleTab) {
+    updateActiveDocument((document) => ({
+      ...document,
+      activeTab: nextTab
+    }));
+  }
+
+  function updateSelectedNodeId(nodeId: string | null) {
+    updateActiveDocument((document) => ({
+      ...document,
+      selectedNodeId: nodeId
+    }));
+  }
+
+  function updateHumanReviewNote(note: string) {
+    updateActiveDocument((document) => ({
+      ...document,
+      humanReviewDraft: {
+        ...document.humanReviewDraft,
+        reviewerNote: note
+      }
+    }));
+  }
+
+  function rerunDoctor() {
+    if (!activeDocument) {
+      return;
+    }
+
+    const nextReport = createDoctorReportFromWorkflow(activeDocument.originalWorkflowIr, activeDocument.currentRequest);
+    updateActiveDocument((document) => ({
+      ...document,
+      latestReport: nextReport,
+      latestReportState: "ready",
+      reviewMode: "original",
+      activeTab: "risks",
+      selectedNodeId: nextReport.view.nodes[0]?.id ?? null,
+      humanReviewDraft: createEmptyHumanReview()
+    }));
     resetAiExplainer();
     setError(null);
   }
@@ -401,18 +560,32 @@ export default function Home() {
       return;
     }
 
-    setReviewMode("patched");
-    setActiveTab("verification");
-    setSelectedNodeId(report.patchedView.nodes[0]?.id ?? null);
+    updateActiveDocument((document) => ({
+      ...document,
+      reviewMode: "patched",
+      activeTab: "verification",
+      selectedNodeId: report.patchedView.nodes[0]?.id ?? null
+    }));
   }
 
-  function exportReviewPacket() {
-    if (!reviewPacket || !report) {
+  async function exportReviewPacket() {
+    if (!reviewPacket || !report || !activeDocument) {
       return;
     }
 
     downloadJson(`${slugify(report.workflow.name)}-review-packet.json`, reviewPacket);
-    setPacketExported(true);
+    const repository = repositoryRef.current;
+    if (!repository) {
+      return;
+    }
+
+    const artifact = createReviewPacketArtifact({
+      workflowDocumentId: activeDocument.id,
+      packet: reviewPacket,
+      exportedAt: new Date().toISOString()
+    });
+    await repository.saveReviewPacketArtifact(artifact);
+    await loadWorkspaceSnapshot(activeDocument.id);
   }
 
   function exportPatchedWorkflowIr() {
@@ -434,15 +607,11 @@ export default function Home() {
       return;
     }
 
-    setReviewMode("original");
-    setSelectedNodeId(report.view.nodes[0]?.id ?? null);
-  }
-
-  function resetHumanReview() {
-    setHumanDecision("undecided");
-    setHumanReviewNote("");
-    setHumanDecidedAt(undefined);
-    setConfirmedChecklistItemIds([]);
+    updateActiveDocument((document) => ({
+      ...document,
+      reviewMode: "original",
+      selectedNodeId: report.view.nodes[0]?.id ?? null
+    }));
   }
 
   function resetAiExplainer() {
@@ -464,29 +633,49 @@ export default function Home() {
     setSettingsTestStatus("cleared");
   }
 
-  function clearWorkspaceData() {
-    setWorkflowInput(null);
-    setReport(null);
-    setSelectedNodeId(null);
-    setReviewMode("original");
-    setActiveTab("summary");
-    setPacketExported(false);
-    resetHumanReview();
+  async function clearWorkspaceData() {
+    const repository = repositoryRef.current;
+    if (repository) {
+      await repository.clearWorkspaceData();
+    }
+    setWorkflowDocuments([]);
+    setActiveWorkflowDocumentId(null);
+    setActiveReviewPacketArtifacts([]);
     resetAiExplainer();
     setError(null);
   }
 
   function recordHumanDecision(decision: HumanReviewDecision) {
-    setHumanDecision(decision);
-    setHumanDecidedAt(decision === "undecided" ? undefined : new Date().toISOString());
+    updateActiveDocument((document) => ({
+      ...document,
+      humanReviewDraft:
+        decision === "undecided"
+          ? {
+              decision,
+              reviewerNote: document.humanReviewDraft.reviewerNote,
+              confirmedChecklistItemIds: document.humanReviewDraft.confirmedChecklistItemIds
+            }
+          : {
+              ...document.humanReviewDraft,
+              decision,
+              decidedAt: new Date().toISOString()
+            }
+    }));
   }
 
   function toggleChecklistConfirmation(itemId: string) {
-    setConfirmedChecklistItemIds((current) =>
-      current.includes(itemId)
-        ? current.filter((currentId) => currentId !== itemId)
-        : [...current, itemId]
-    );
+    updateActiveDocument((document) => {
+      const current = document.humanReviewDraft.confirmedChecklistItemIds;
+      return {
+        ...document,
+        humanReviewDraft: {
+          ...document.humanReviewDraft,
+          confirmedChecklistItemIds: current.includes(itemId)
+            ? current.filter((currentId) => currentId !== itemId)
+            : [...current, itemId]
+        }
+      };
+    });
   }
 
   function handlePrimaryAction() {
@@ -501,7 +690,7 @@ export default function Home() {
     }
 
     if (humanReviewAccepted) {
-      exportReviewPacket();
+      void exportReviewPacket();
       return;
     }
 
@@ -510,7 +699,10 @@ export default function Home() {
       return;
     }
 
-    setActiveTab("verification");
+    updateActiveDocument((document) => ({
+      ...document,
+      activeTab: "verification"
+    }));
   }
 
   const primaryActionLabel = getPrimaryActionLabel({
@@ -551,7 +743,7 @@ export default function Home() {
       label: t("actions.exportReviewPacket"),
       hint: t("command.exportPacketHint"),
       disabled: !reviewPacket || !report,
-      action: exportReviewPacket
+      action: () => void exportReviewPacket()
     },
     {
       label: t("actions.exportPatchedWorkflowIr"),
@@ -568,6 +760,46 @@ export default function Home() {
     }, 0);
 
     return () => window.clearTimeout(loadHandle);
+  }, []);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function initializeWorkspace() {
+      try {
+        if (!window.indexedDB) {
+          throw new Error("IndexedDB is unavailable in this browser.");
+        }
+
+        const repository = createIndexedDbWorkspaceRepository(window.indexedDB);
+        repositoryRef.current = repository;
+        const workspace = await repository.initialize();
+        const documents = await repository.listWorkflowDocuments();
+        const activeId = workspace.activeWorkflowDocumentId ?? documents[0]?.id ?? null;
+        const artifacts = activeId ? await repository.listReviewPacketArtifacts(activeId) : [];
+
+        if (!isMounted) {
+          return;
+        }
+
+        setWorkflowDocuments(documents);
+        setActiveWorkflowDocumentId(activeId);
+        setActiveReviewPacketArtifacts(artifacts);
+        setWorkspaceLoaded(true);
+      } catch (workspaceError) {
+        if (!isMounted) {
+          return;
+        }
+        setError(workspaceError instanceof Error ? workspaceError.message : "Unable to initialize local workspace.");
+        setWorkspaceLoaded(true);
+      }
+    }
+
+    void initializeWorkspace();
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   useEffect(() => {
@@ -621,11 +853,20 @@ export default function Home() {
           onChange={(event) => void importWorkflow(event.target.files?.[0])}
         />
 
+        <WorkflowExplorer
+          workflows={explorerItems}
+          samples={SAMPLE_WORKFLOWS}
+          t={t}
+          onImportClick={() => fileInputRef.current?.click()}
+          onLoadSample={(sample) => void loadSampleWorkflow(sample)}
+          onSelectWorkflow={(workflowDocumentId) => void selectWorkflowDocument(workflowDocumentId)}
+        />
+
         <section className="workflow-card" aria-label={t("sidebar.reviewTarget")}>
           <span>{t("app.version")}</span>
           <h2>{t("sidebar.reviewTarget")}</h2>
           <span>{t("sidebar.workflowName")}</span>
-          <h1>{workflowInput?.name ?? "OpenWorkflowDoctor"}</h1>
+          <h1>{workflowInput?.name ?? (workspaceLoaded ? "OpenWorkflowDoctor" : t("workspace.loading"))}</h1>
           {!workflowInput ? (
             <p className="side-copy">
               {t("sidebar.localStaticCopy")}
@@ -661,8 +902,9 @@ export default function Home() {
             <textarea
               id="patch-request"
               value={request}
-              onChange={(event) => setRequest(event.target.value)}
+              onChange={(event) => updatePatchRequest(event.target.value)}
             />
+            {isReportStale ? <p className="review-warning">{t("workspace.reportStale")}</p> : null}
             <button type="button" onClick={rerunDoctor}>
               {t("actions.runDoctor")}
             </button>
@@ -731,13 +973,18 @@ export default function Home() {
               fitViewOptions={{ padding: 0.24 }}
               minZoom={0.35}
               maxZoom={1.45}
-              onNodeClick={(_, node) => setSelectedNodeId(node.id)}
+              onNodeClick={(_, node) => updateSelectedNodeId(node.id)}
             >
               <Background gap={24} color="#dde4ee" />
               <Controls />
             </ReactFlow>
           ) : (
-            <EmptyState t={t} />
+            <EmptyState
+              samples={SAMPLE_WORKFLOWS}
+              t={t}
+              onImportClick={() => fileInputRef.current?.click()}
+              onLoadSample={(sample) => void loadSampleWorkflow(sample)}
+            />
           )}
         </div>
 
@@ -758,14 +1005,14 @@ export default function Home() {
           aiStatus={aiStatus}
           aiError={aiError}
           t={t}
-          onTabChange={setActiveTab}
+          onTabChange={updateActiveTab}
           onGenerateAiExplanation={() => void generateAiExplanation()}
           onPreviewPatchedIr={previewPatchedIr}
           onBackToOriginal={backToOriginal}
           onToggleChecklistConfirmation={toggleChecklistConfirmation}
           onRecordHumanDecision={recordHumanDecision}
-          onHumanReviewNoteChange={setHumanReviewNote}
-          onExportReviewPacket={exportReviewPacket}
+          onHumanReviewNoteChange={updateHumanReviewNote}
+          onExportReviewPacket={() => void exportReviewPacket()}
           onExportPatchedWorkflowIr={exportPatchedWorkflowIr}
         />
       </section>
@@ -811,12 +1058,32 @@ export default function Home() {
   );
 }
 
-function EmptyState({ t }: { t: Translator }) {
+function EmptyState({
+  samples,
+  t,
+  onImportClick,
+  onLoadSample
+}: {
+  samples: SampleWorkflowCatalogItem[];
+  t: Translator;
+  onImportClick: () => void;
+  onLoadSample: (sample: SampleWorkflowCatalogItem) => void;
+}) {
   return (
     <section className="empty-workspace" aria-label={t("empty.title")}>
       <p className="product-kicker">{t("app.version")}</p>
       <h2>{t("empty.title")}</h2>
       <p>{t("empty.body")}</p>
+      <div className="empty-actions">
+        <button type="button" onClick={onImportClick}>
+          {t("actions.importJson")}
+        </button>
+        {samples.map((sample) => (
+          <button key={sample.id} type="button" className="secondary-button" onClick={() => onLoadSample(sample)}>
+            {t("actions.loadSample")} {sample.label}
+          </button>
+        ))}
+      </div>
       <section className="welcome-checklist" aria-label={t("empty.produces")}>
         <h3>{t("empty.produces")}</h3>
         <ul>
@@ -1953,6 +2220,22 @@ function getSettingsTestStatusLabel(status: SettingsTestStatus, t: Translator): 
     case "cleared":
       return t("settings.credentialsCleared");
   }
+}
+
+function getWorkflowDocumentStatusLabel(document: WorkflowDocument, t: Translator): string {
+  if (document.latestReportState === "stale") {
+    return t("explorer.stale");
+  }
+
+  if (!document.latestReport) {
+    return t("explorer.importedOnly");
+  }
+
+  if (document.reviewMode === "patched") {
+    return `${t("explorer.patchPreview")} · ${statusLabels[document.latestReport.verification.status]}`;
+  }
+
+  return `${t("explorer.diagnosed")} · ${statusLabels[document.latestReport.verification.status]}`;
 }
 
 function createConnectionTestInput(): WorkflowExplanationInput {

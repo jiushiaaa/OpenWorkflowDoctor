@@ -12,7 +12,7 @@ test("workbench supports the deterministic v0.2 review packet demo flow", async 
   await expect(page.getByRole("button", { name: "命令面板" })).toBeVisible();
   await expect(page.getByRole("button", { name: "设置" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Dark theme" })).toHaveCount(0);
-  await expect(page.getByRole("button", { name: "导入 JSON" })).toBeVisible();
+  await expect(page.locator(".primary-action")).toHaveText("导入 JSON");
   await expect(page.getByRole("contentinfo", { name: "Workbench status" })).toContainText("本地模式");
   await expect(page.getByRole("contentinfo", { name: "Workbench status" })).toContainText("无运行时");
   await expect(page.getByRole("contentinfo", { name: "Workbench status" })).toContainText("无凭据");
@@ -55,7 +55,6 @@ test("workbench supports the deterministic v0.2 review packet demo flow", async 
   await importInput
     .setInputFiles(path.join(process.cwd(), "samples/n8n/refund-workflow.json"));
 
-  await expect(importInput).toHaveJSProperty("files.length", 1);
   const reviewSteps = page.getByRole("complementary", { name: "审查步骤" });
   await expect(reviewSteps.getByRole("heading", { name: "审查目标" })).toBeVisible();
   await expect(reviewSteps.getByRole("heading", { name: "Refund Workflow" })).toBeVisible();
@@ -135,4 +134,45 @@ test("workbench supports the deterministic v0.2 review packet demo flow", async 
   const download = await downloadPromise;
 
   expect(download.suggestedFilename()).toBe("refund-workflow-review-packet.json");
+});
+
+test("workbench imports two workflows and restores state when switching", async ({ page }) => {
+  await page.goto("/");
+
+  const importInput = page.locator('input[type="file"]');
+  await importInput.setInputFiles(path.join(process.cwd(), "samples/n8n/refund-workflow.json"));
+
+  const explorer = page.getByRole("region", { name: "工作流浏览器" });
+  await expect(explorer).toBeVisible();
+  await expect(explorer.getByRole("button", { name: /Refund Workflow/ })).toBeVisible();
+
+  const reviewSteps = page.getByRole("complementary", { name: "审查步骤" });
+  await reviewSteps.locator(".primary-action").click();
+
+  const reviewConsole = page.getByRole("region", { name: "Review Console" });
+  await expect(reviewConsole.getByText("Webhook has no dedupe guard", { exact: true })).toBeVisible();
+
+  await importInput.setInputFiles(path.join(process.cwd(), "samples/n8n/messy-legacy.workflow.json"));
+
+  await expect(explorer.getByRole("button", { name: /Refund Workflow/ })).toBeVisible();
+  await expect(explorer.getByRole("button", { name: /Messy Legacy Workflow/ })).toBeVisible();
+  await expect(
+    page.getByRole("region", { name: "工作流审查 IDE" }).getByRole("heading", { name: "Messy Legacy Workflow" })
+  ).toBeVisible();
+  await expect(reviewSteps.locator(".primary-action")).toHaveText("运行 Doctor");
+  await expect(reviewConsole.getByText("Webhook has no dedupe guard", { exact: true })).toHaveCount(0);
+
+  await explorer.getByRole("button", { name: /Refund Workflow/ }).click();
+
+  await expect(
+    page.getByRole("region", { name: "工作流审查 IDE" }).getByRole("heading", { name: "Refund Workflow" })
+  ).toBeVisible();
+  await expect(reviewConsole.getByText("Webhook has no dedupe guard", { exact: true })).toBeVisible();
+
+  await explorer.getByRole("button", { name: /Messy Legacy Workflow/ }).click();
+
+  await expect(
+    page.getByRole("region", { name: "工作流审查 IDE" }).getByRole("heading", { name: "Messy Legacy Workflow" })
+  ).toBeVisible();
+  await expect(reviewConsole.getByText("Webhook has no dedupe guard", { exact: true })).toHaveCount(0);
 });
