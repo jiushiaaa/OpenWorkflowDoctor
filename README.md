@@ -56,6 +56,7 @@ The exported packet is an OpenWorkflowDoctor review artifact. It is not an n8n-i
 - Keep original workflow, patched preview, verifier output, and human review decision separate.
 - Export a `DoctorReviewPacket` with before/after risk counts, readable patch diff, verifier gates, checklist state, review target fingerprint, and human decision.
 - Support advisory AI explanations with local BYOK provider settings and deterministic fallback.
+- Support AI-assisted patch proposals as validated structured `PatchOperation` candidates, with deterministic validation, patch preview, verifier gates, and human review still required.
 - Support `zh-CN` and `en-US` UI copy.
 
 Supported static diagnostics currently include webhook dedupe, HTTP timeout, payment idempotency, missing error branches, incomplete control-flow routes, and missing success audit trails.
@@ -70,6 +71,7 @@ OpenWorkflowDoctor is local-first and review-first.
 - Sensitive parameter previews such as API keys, authorization headers, passwords, tokens, and secrets are redacted before they enter WorkflowIR, UI, or review exports.
 - Static diagnostics and deterministic patch generation work without an LLM.
 - AI Explainer is advisory-only in v0.2 and v0.3.x.
+- AI Patch Proposal in v0.4 can propose validated structured changes, but it cannot apply patches, mutate raw n8n JSON, change verifier status, or change human review.
 - Patch generation and verification are separate steps.
 - A Builder Agent may propose changes in future versions, but only a Verifier can mark them `pass`, `hold`, or `fail`.
 - Human review is recorded separately from verifier output.
@@ -91,7 +93,7 @@ Out of scope for the current MVP:
 | v0.2.0 | Frozen | Advisory AI Explainer, Settings, i18n, and BYOK AI Provider |
 | v0.3.0 | Frozen | Local Workspace and Multiple Workflows |
 | v0.3.1 | Frozen | Workbench Refactor |
-| v0.4.0 | Planned | AI Patch Proposal. AI can only output validated structured `PatchOperation` data. |
+| v0.4.0 | Implemented | AI Patch Proposal. AI can only output validated structured `PatchOperation` data. |
 | v0.5.0 | Planned | Read-only n8n Import. Import only, no execution and no write-back. |
 | v0.6.0 | Planned | Execution Logs and Observability Analysis for failure paths, slow nodes, and error hotspots. |
 

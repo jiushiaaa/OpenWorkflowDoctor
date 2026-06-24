@@ -1,5 +1,6 @@
 import {
   createDoctorReviewPacket,
+  type AiPatchProposalValidationResult,
   type DoctorReport,
   type HumanReviewDecision,
   type RiskIssue,
@@ -7,7 +8,7 @@ import {
 } from "@openworkflowdoctor/workflow-ir";
 import type { WorkflowExplanation, WorkflowExplanationResult } from "@openworkflowdoctor/workflow-ai";
 import type { Translator } from "../lib/i18n";
-import type { ReviewMode } from "../lib/workspace-store";
+import type { AiPatchProposalState, ReviewMode } from "../lib/workspace-store";
 import { VerificationPanel } from "./VerificationPanel";
 import {
   consoleTabIds,
@@ -39,10 +40,14 @@ export function ReviewConsole({
   aiResult,
   aiStatus,
   aiError,
+  aiPatchProposalState,
+  aiPatchValidation,
   t,
   onTabChange,
   onGenerateAiExplanation,
+  onGenerateAiPatchProposal,
   onPreviewPatchedIr,
+  onPreviewAiPatchProposal,
   onBackToOriginal,
   onToggleChecklistConfirmation,
   onRecordHumanDecision,
@@ -65,10 +70,14 @@ export function ReviewConsole({
   aiResult: WorkflowExplanationResult | null;
   aiStatus: AiExplainerStatus;
   aiError: string | null;
+  aiPatchProposalState: AiPatchProposalState;
+  aiPatchValidation: AiPatchProposalValidationResult | null;
   t: Translator;
   onTabChange: (tab: ConsoleTab) => void;
   onGenerateAiExplanation: () => void;
+  onGenerateAiPatchProposal: () => void;
   onPreviewPatchedIr: () => void;
+  onPreviewAiPatchProposal: () => void;
   onBackToOriginal: () => void;
   onToggleChecklistConfirmation: (itemId: string) => void;
   onRecordHumanDecision: (decision: HumanReviewDecision) => void;
@@ -111,8 +120,12 @@ export function ReviewConsole({
           <PatchDiffTab
             report={report}
             reviewMode={reviewMode}
+            aiPatchProposalState={aiPatchProposalState}
+            aiPatchValidation={aiPatchValidation}
             t={t}
+            onGenerateAiPatchProposal={onGenerateAiPatchProposal}
             onPreviewPatchedIr={onPreviewPatchedIr}
+            onPreviewAiPatchProposal={onPreviewAiPatchProposal}
             onBackToOriginal={onBackToOriginal}
           />
         ) : null}
@@ -308,14 +321,22 @@ function AiExplainerTab({
 function PatchDiffTab({
   report,
   reviewMode,
+  aiPatchProposalState,
+  aiPatchValidation,
   t,
+  onGenerateAiPatchProposal,
   onPreviewPatchedIr,
+  onPreviewAiPatchProposal,
   onBackToOriginal
 }: {
   report: DoctorReport | null;
   reviewMode: ReviewMode;
+  aiPatchProposalState: AiPatchProposalState;
+  aiPatchValidation: AiPatchProposalValidationResult | null;
   t: Translator;
+  onGenerateAiPatchProposal: () => void;
   onPreviewPatchedIr: () => void;
+  onPreviewAiPatchProposal: () => void;
   onBackToOriginal: () => void;
 }) {
   if (!report) {
@@ -345,6 +366,79 @@ function PatchDiffTab({
       <h3>{t("patch.operationList")}</h3>
       <p className="panel-lead">{report.proposal.summary}</p>
       <DiffList diff={report.patchDiff} t={t} />
+      <section className="verification-summary" aria-label="AI-assisted patch proposal">
+        <div className="console-toolbar">
+          <div>
+            <h3>{t("patch.aiTitle")}</h3>
+            <p>{t("patch.aiAdvisory")}</p>
+          </div>
+          <div className="console-actions">
+            <button type="button" onClick={onGenerateAiPatchProposal} disabled={aiPatchProposalState.status === "generating"}>
+              {aiPatchProposalState.status === "generating" ? t("actions.generating") : t("actions.generateAiPatch")}
+            </button>
+            <button
+              type="button"
+              className="secondary-button"
+              onClick={onPreviewAiPatchProposal}
+              disabled={
+                reviewMode === "patched" ||
+                !aiPatchProposalState.candidate ||
+                aiPatchProposalState.status === "stale" ||
+                aiPatchValidation?.canPreview !== true
+              }
+            >
+              {t("patch.previewAi")}
+            </button>
+          </div>
+        </div>
+        <div className="console-grid">
+          <Metric label={t("ai.source")} value={t("patch.aiBadge")} />
+          <Metric label={t("verification.status")} value={aiPatchProposalState.status} />
+          <KeyValue label={t("patch.inputFingerprint")} value={aiPatchProposalState.inputFingerprint ?? t("packet.none")} />
+        </div>
+        {aiPatchProposalState.safeError ? <p className="error-text">{aiPatchProposalState.safeError}</p> : null}
+        {aiPatchProposalState.status === "stale" ? <p className="review-warning">{t("patch.aiStale")}</p> : null}
+        {aiPatchProposalState.candidate ? (
+          <>
+            <p className="panel-lead">{aiPatchProposalState.candidate.proposal.summary}</p>
+            <ul className="compact-list">
+              {aiPatchProposalState.candidate.proposal.operations.map((operation, index) => (
+                <li key={`${operation.type}:${operation.targetNodeId}:${index}`}>
+                  <strong>{operation.type}</strong>
+                  <small>{operation.targetNodeId}</small>
+                </li>
+              ))}
+            </ul>
+          </>
+        ) : (
+          <p className="empty-text">{t("patch.aiIdle")}</p>
+        )}
+        {aiPatchValidation?.conflicts.length ? (
+          <section>
+            <h3>{t("patch.conflicts")}</h3>
+            <ul className="compact-list">
+              {aiPatchValidation.conflicts.map((conflict) => (
+                <li key={conflict.id}>
+                  <strong>{conflict.severity}: {conflict.code}</strong>
+                  <small>{conflict.explanation}</small>
+                </li>
+              ))}
+            </ul>
+          </section>
+        ) : null}
+        {aiPatchProposalState.candidate?.safetyNotes.length ? (
+          <section>
+            <h3>{t("patch.safetyNotes")}</h3>
+            <ul className="compact-list">
+              {aiPatchProposalState.candidate.safetyNotes.map((note) => (
+                <li key={note}>
+                  <small>{note}</small>
+                </li>
+              ))}
+            </ul>
+          </section>
+        ) : null}
+      </section>
     </div>
   );
 }

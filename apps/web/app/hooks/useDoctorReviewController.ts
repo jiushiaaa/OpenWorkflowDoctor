@@ -1,14 +1,26 @@
 import { useMemo } from "react";
 import { buildWorkflowExplanationInput, type WorkflowExplanationInput } from "@openworkflowdoctor/workflow-ai";
 import {
+  buildAiPatchProposalInput,
+  createAiPatchDoctorReport,
   createDoctorReportFromWorkflow,
   createDoctorReviewPacket,
   createWorkflowViewModel,
+  validateAiPatchProposalCandidate,
+  type AiPatchProposalCandidate,
   type HumanReview,
   type HumanReviewDecision
 } from "@openworkflowdoctor/workflow-ir";
-import { createEmptyHumanReview, createReviewPacketArtifact, type ReviewPacketArtifact, type WorkflowDocument } from "../lib/workspace-store";
+import { toRequestProviderSettings, type AiProviderSettings } from "../lib/settings";
+import {
+  createEmptyAiPatchProposalState,
+  createEmptyHumanReview,
+  createReviewPacketArtifact,
+  type ReviewPacketArtifact,
+  type WorkflowDocument
+} from "../lib/workspace-store";
 import { emptyIssues, getStepStatuses, type ConsoleTab } from "../components/workbench-shared";
+import type { AiPatchProposalApiResult } from "../api/ai/patch/route";
 
 const defaultRequest =
   "帮我修复支付和通知相关风险，优先补 webhook 去重和退款幂等性。";
@@ -30,6 +42,12 @@ export function deriveDoctorReviewState(
   const confirmedChecklistItemIds = activeDocument?.humanReviewDraft.confirmedChecklistItemIds ?? [];
   const reviewPacket = report ? createDoctorReviewPacket(report, undefined, humanReview) : null;
   const aiInput: WorkflowExplanationInput | null = report ? buildWorkflowExplanationInput(report) : null;
+  const aiPatchProposalInput = report ? buildAiPatchProposalInput(report, { request }) : null;
+  const aiPatchProposalState = activeDocument?.aiPatchProposalState ?? createEmptyAiPatchProposalState();
+  const aiPatchValidation =
+    report && aiPatchProposalInput && aiPatchProposalState.candidate
+      ? validateAiPatchProposalCandidate(aiPatchProposalInput, report.workflow, aiPatchProposalState.candidate)
+      : null;
   const requiredChecklistItems =
     reviewPacket?.acceptanceChecklist.filter((item) => item.status !== "pass") ?? [];
   const missingChecklistItemIds = requiredChecklistItems
@@ -84,6 +102,9 @@ export function deriveDoctorReviewState(
     confirmedChecklistItemIds,
     reviewPacket,
     aiInput,
+    aiPatchProposalInput,
+    aiPatchProposalState,
+    aiPatchValidation,
     requiredChecklistItems,
     missingChecklistItemIds,
     canAcceptHumanReview,
@@ -123,7 +144,14 @@ export function useDoctorReviewController({
     updateActiveDocument((document) => ({
       ...document,
       currentRequest: nextRequest,
-      latestReportState: document.latestReport ? "stale" : document.latestReportState
+      latestReportState: document.latestReport ? "stale" : document.latestReportState,
+      aiPatchProposalState:
+        document.aiPatchProposalState.status === "idle"
+          ? document.aiPatchProposalState
+          : {
+              ...document.aiPatchProposalState,
+              status: "stale"
+            }
     }));
   }
 
@@ -164,6 +192,100 @@ export function useDoctorReviewController({
       reviewMode: "original",
       activeTab: "risks",
       selectedNodeId: nextReport.view.nodes[0]?.id ?? null,
+      humanReviewDraft: createEmptyHumanReview(),
+      aiPatchProposalState: createEmptyAiPatchProposalState()
+    }));
+    onReviewChanged();
+    setError(null);
+  }
+
+  async function generateAiPatchProposal(settings: AiProviderSettings) {
+    if (!state.aiPatchProposalInput || !state.report) {
+      return;
+    }
+    const inputFingerprint = state.aiPatchProposalInput.inputFingerprint;
+
+    if (!settings.enabled || settings.apiKey.trim().length === 0) {
+      updateActiveDocument((document) => ({
+        ...document,
+        aiPatchProposalState: {
+          status: "provider_unavailable",
+          safeError: settings.enabled ? "No AI provider configured." : "AI provider is disabled.",
+          inputFingerprint
+        }
+      }));
+      return;
+    }
+
+    updateActiveDocument((document) => ({
+      ...document,
+      aiPatchProposalState: {
+        status: "generating",
+        inputFingerprint
+      }
+    }));
+
+    try {
+      const response = await fetch("/api/ai/patch", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          input: state.aiPatchProposalInput,
+          provider: toRequestProviderSettings(settings)
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`AI patch proposal request failed with ${response.status}`);
+      }
+
+      const result = (await response.json()) as AiPatchProposalApiResult;
+      if (result.source !== "ai") {
+        throw new Error(result.unavailableReason);
+      }
+
+      const validation = validateAiPatchProposalCandidate(state.aiPatchProposalInput, state.report.workflow, result.candidate);
+      updateActiveDocument((document) => ({
+        ...document,
+        aiPatchProposalState: {
+          status: validation.canPreview ? "ready" : "conflict",
+          candidate: result.candidate,
+          generatedAt: result.candidate.createdAt,
+          inputFingerprint: result.candidate.inputFingerprint,
+          ...(validation.canPreview ? {} : { safeError: "AI proposal has blocking conflicts." })
+        }
+      }));
+    } catch (error) {
+      updateActiveDocument((document) => ({
+        ...document,
+        aiPatchProposalState: {
+          status: "error",
+          safeError: error instanceof Error ? error.message : "AI patch proposal failed.",
+          inputFingerprint
+        }
+      }));
+    }
+  }
+
+  function previewAiPatchProposal() {
+    if (!state.report || !state.aiPatchProposalInput || !state.aiPatchProposalState.candidate) {
+      return;
+    }
+
+    const nextReport = createAiPatchDoctorReport(
+      state.report,
+      state.aiPatchProposalInput,
+      state.aiPatchProposalState.candidate as AiPatchProposalCandidate
+    );
+    updateActiveDocument((document) => ({
+      ...document,
+      latestReport: nextReport,
+      latestReportState: "ready",
+      reviewMode: "patched",
+      activeTab: "verification",
+      selectedNodeId: nextReport.patchedView.nodes[0]?.id ?? null,
       humanReviewDraft: createEmptyHumanReview()
     }));
     onReviewChanged();
@@ -265,7 +387,9 @@ export function useDoctorReviewController({
     updateSelectedNodeId,
     updateHumanReviewNote,
     rerunDoctor,
+    generateAiPatchProposal,
     previewPatchedIr,
+    previewAiPatchProposal,
     exportReviewPacket,
     exportPatchedWorkflowIr,
     backToOriginal,

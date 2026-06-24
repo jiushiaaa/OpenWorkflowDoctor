@@ -127,6 +127,111 @@ export type WorkflowSummary = {
   recommendedStatus: VerificationStatus;
 };
 
+export type PatchConflictSeverity = "info" | "hold" | "blocker";
+
+export type PatchConflictCode =
+  | "target_missing"
+  | "duplicate_new_node_id"
+  | "branch_route_exists"
+  | "unsupported_operation"
+  | "unsupported_node_type"
+  | "unsupported_parameter"
+  | "stale_report"
+  | "overlapping_operation"
+  | "unmapped_ai_reference"
+  | "semantic_validation_failed";
+
+export type PatchConflict = {
+  id: string;
+  severity: PatchConflictSeverity;
+  operationIndexes: number[];
+  targetNodeId?: string;
+  issueId?: string;
+  code: PatchConflictCode;
+  explanation: string;
+};
+
+export type PatchProposalSource = {
+  kind: "deterministic" | "ai-assisted";
+  generatedAt?: string;
+  inputFingerprint?: string;
+  modelLabel?: string;
+  validation?: {
+    schema: VerificationStatus;
+    semantic: VerificationStatus;
+    conflictStatus: "none" | PatchConflictSeverity;
+  };
+  safetyNotes: string[];
+};
+
+export type AiPatchProposalInput = {
+  schemaVersion: "openworkflowdoctor.ai-patch-input.v1";
+  inputFingerprint: string;
+  request: string;
+  workflow: {
+    alias: "workflow";
+    nodeCount: number;
+    edgeCount: number;
+    riskCounts: Record<RiskSeverity, number>;
+  };
+  graph: {
+    nodes: {
+      id: string;
+      type: string;
+      typeFamily: NodeTypeFamily;
+    }[];
+    edges: {
+      id: string;
+      sourceNodeId: string;
+      targetNodeId: string;
+      sourceOutput: string;
+      sourceOutputIndex: number;
+    }[];
+  };
+  issues: {
+    id: string;
+    severity: RiskSeverity;
+    nodeId?: string;
+    title: string;
+    explanation: string;
+    suggestedFix: string;
+  }[];
+  deterministicPatch: {
+    summary: string;
+    operationTypes: PatchOperation["type"][];
+    risksAddressed: string[];
+    expectedImpact: string[];
+  };
+  capabilityManifest: {
+    allowedOperationTypes: PatchOperation["type"][];
+    allowedSyntheticNodeTypes: string[];
+    allowedParameterUpdates: {
+      key: "timeout";
+      minimum: number;
+      maximum: number;
+    }[];
+    unsupportedOperationTypes: PatchOperation["type"][];
+  };
+};
+
+export type AiPatchProposalCandidate = {
+  schemaVersion: "openworkflowdoctor.ai-patch-proposal.v1";
+  source: "ai";
+  createdAt: string;
+  inputFingerprint: string;
+  modelLabel?: string;
+  proposal: PatchProposal;
+  conflicts: PatchConflict[];
+  safetyNotes: string[];
+};
+
+export type AiPatchProposalValidationResult = {
+  proposal: PatchProposal;
+  conflicts: PatchConflict[];
+  canPreview: boolean;
+  patchSource: PatchProposalSource;
+};
+
 export type DoctorReport = {
   workflow: WorkflowIR;
   summary: WorkflowSummary;
@@ -140,6 +245,7 @@ export type DoctorReport = {
   patchedIssues: RiskIssue[];
   verification: VerificationReport;
   acceptanceRecommendation: VerificationStatus;
+  patchSource?: PatchProposalSource;
 };
 
 export type RiskDelta = {
@@ -189,6 +295,7 @@ export type DoctorReviewPacket = {
   };
   patch: {
     proposal: PatchProposal;
+    proposalSource?: PatchProposalSource;
     patchDiff: PatchDiffLine[];
     patchedWorkflow: WorkflowIR;
     patchedSummary: WorkflowSummary;

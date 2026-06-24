@@ -1,3 +1,4 @@
+export * from "./ai-patch-proposal.js";
 export * from "./doctor-report.js";
 export * from "./graph.js";
 export * from "./n8n-parser.js";

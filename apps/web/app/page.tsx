@@ -318,10 +318,14 @@ export default function Home() {
           aiResult={ai.aiResult}
           aiStatus={ai.aiStatus}
           aiError={ai.aiError}
+          aiPatchProposalState={doctor.aiPatchProposalState}
+          aiPatchValidation={doctor.aiPatchValidation}
           t={t}
           onTabChange={doctor.updateActiveTab}
           onGenerateAiExplanation={() => void ai.generateAiExplanation()}
+          onGenerateAiPatchProposal={() => void doctor.generateAiPatchProposal(settings.ai)}
           onPreviewPatchedIr={doctor.previewPatchedIr}
+          onPreviewAiPatchProposal={doctor.previewAiPatchProposal}
           onBackToOriginal={doctor.backToOriginal}
           onToggleChecklistConfirmation={doctor.toggleChecklistConfirmation}
           onRecordHumanDecision={doctor.recordHumanDecision}

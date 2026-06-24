@@ -38,6 +38,7 @@ function createDocument(overrides: Partial<WorkflowDocument> = {}): WorkflowDocu
     activeTab: "summary",
     selectedNodeId: "start",
     reviewPacketArtifactIds: [],
+    aiPatchProposalState: { status: "idle" },
     ...overrides
   };
 }

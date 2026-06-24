@@ -47,6 +47,7 @@ export function createDoctorReviewPacket(
     },
     patch: {
       proposal: cloneJson(report.proposal),
+      ...(report.patchSource ? { proposalSource: cloneJson(report.patchSource) } : {}),
       patchDiff: cloneJson(report.patchDiff),
       patchedWorkflow: cloneJson(report.patchedWorkflow),
       patchedSummary: cloneJson(report.patchedSummary),
@@ -145,6 +146,7 @@ function createReviewTargetFingerprint(
     originalSummary: report.summary,
     originalIssues: report.issues,
     proposal: report.proposal,
+    patchSource: report.patchSource,
     patchDiff: report.patchDiff,
     patchedWorkflow: report.patchedWorkflow,
     patchedSummary: report.patchedSummary,

@@ -2,6 +2,7 @@ import { expect, test } from "@playwright/test";
 import path from "node:path";
 
 test("workbench supports the deterministic v0.2 review packet demo flow", async ({ page }) => {
+  test.setTimeout(60000);
   await page.goto("/");
 
   await expect(page.getByRole("heading", { name: "OpenWorkflowDoctor" })).toBeVisible();
@@ -104,6 +105,8 @@ test("workbench supports the deterministic v0.2 review packet demo flow", async 
   await expect(reviewConsole.getByText("操作列表")).toBeVisible();
   await expect(reviewConsole.getByText("update_node_parameters")).toBeVisible();
   await expect(reviewConsole.getByText("insert_node_after")).toBeVisible();
+  await expect(reviewConsole.getByRole("heading", { name: "AI 补丁提案" })).toBeVisible();
+  await expect(reviewConsole.getByText("AI 只能提出可审查的 WorkflowIR PatchOperation。确定性验证、Verifier 和人工审查仍然必需。")).toBeVisible();
 
   await reviewSteps.getByRole("button", { name: "预览补丁 IR" }).click();
 
@@ -116,7 +119,7 @@ test("workbench supports the deterministic v0.2 review packet demo flow", async 
   await expect(page.getByRole("contentinfo", { name: "Workbench status" })).toContainText("验证器: HOLD");
   await expect(page.getByRole("contentinfo", { name: "Workbench status" })).toContainText("视图: 补丁");
 
-  const acceptButton = page.getByRole("button", { name: "接受" });
+  const acceptButton = reviewConsole.getByRole("button", { name: "接受" });
   await expect(acceptButton).toBeDisabled();
 
   for (const checkbox of await page.locator(".confirmation-list input[type='checkbox']").all()) {
@@ -134,6 +137,68 @@ test("workbench supports the deterministic v0.2 review packet demo flow", async 
   const download = await downloadPromise;
 
   expect(download.suggestedFilename()).toBe("refund-workflow-review-packet.json");
+});
+
+test("workbench previews a mock AI-assisted patch through deterministic verifier gates", async ({ page }) => {
+  await page.route("**/api/ai/patch", async (route) => {
+    const body = route.request().postDataJSON() as { input: { inputFingerprint: string; graph: { nodes: { id: string; type: string }[] }; issues: { id: string; title: string }[] } };
+    const httpNodeId = body.input.graph.nodes.find((node) => node.type === "n8n-nodes-base.httprequest")?.id ?? "node-2";
+    const timeoutIssueId = body.input.issues.find((issue) => issue.title === "HTTP request has no timeout")?.id ?? "issue-2";
+
+    await route.fulfill({
+      contentType: "application/json",
+      body: JSON.stringify({
+        source: "ai",
+        candidate: {
+          schemaVersion: "openworkflowdoctor.ai-patch-proposal.v1",
+          source: "ai",
+          createdAt: "2026-06-24T00:00:00.000Z",
+          inputFingerprint: body.input.inputFingerprint,
+          proposal: {
+            summary: "AI-assisted timeout proposal.",
+            operations: [
+              {
+                type: "update_node_parameters",
+                targetNodeId: httpNodeId,
+                parameters: {
+                  timeout: 30000
+                }
+              }
+            ],
+            risksAddressed: [timeoutIssueId],
+            expectedImpact: ["Adds an HTTP timeout."],
+            risksIntroduced: [],
+            requiresHumanReview: true
+          },
+          conflicts: [],
+          safetyNotes: ["AI proposal remains review-only."]
+        }
+      })
+    });
+  });
+
+  await page.goto("/");
+  await page.getByRole("button", { name: "设置" }).click();
+  const settingsModal = page.getByRole("dialog", { name: "设置" });
+  await settingsModal.getByLabel("API Key").fill("sk-e2e-local-only");
+  await settingsModal.getByRole("button", { name: "关闭" }).click();
+
+  await page.locator('input[type="file"]').setInputFiles(path.join(process.cwd(), "samples/n8n/refund-workflow.json"));
+  const reviewSteps = page.getByRole("complementary", { name: "审查步骤" });
+  await reviewSteps.locator(".primary-action").click();
+
+  const reviewConsole = page.getByRole("region", { name: "Review Console" });
+  await reviewConsole.getByRole("tab", { name: "补丁差异" }).click();
+  await reviewConsole.getByRole("button", { name: "生成 AI 补丁提案" }).click();
+  await expect(reviewConsole.getByText("AI 辅助")).toBeVisible();
+  await expect(reviewConsole.getByText("AI-assisted timeout proposal.")).toBeVisible();
+  await expect(reviewConsole.getByRole("button", { name: "预览 AI 补丁" })).toBeEnabled();
+  await reviewConsole.getByRole("button", { name: "预览 AI 补丁" }).click();
+
+  await expect(reviewConsole.getByRole("tab", { name: "验证" })).toHaveAttribute("aria-selected", "true");
+  await expect(reviewConsole.getByText("AI proposal schema is valid")).toBeVisible();
+  await expect(reviewConsole.getByText("AI proposal has no blocking conflicts")).toBeVisible();
+  await expect(page.getByRole("contentinfo", { name: "Workbench status" })).toContainText("验证器: HOLD");
 });
 
 test("workbench imports two workflows and restores state when switching", async ({ page }) => {

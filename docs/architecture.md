@@ -31,6 +31,14 @@ Active workflow switching behaves like switching files in a lightweight IDE:
 
 If the patch request changes after a report exists, the document marks `latestReportState` as `stale`. The user must rerun Doctor before the report, verifier, and review packet reflect the new request.
 
+## v0.4 AI Patch Proposal Boundary
+
+v0.4 adds AI-assisted patch proposal generation without changing the product trust boundary. AI receives only an AI-safe review input derived from secret-safe `WorkflowIR`, synthetic graph ids, aliased issue ids, deterministic diagnostics, a bounded user request, and an explicit capability manifest. It does not receive raw n8n JSON, raw node labels, credentials, API keys, provider config, Review Packet artifacts, raw prompts, raw model responses, or human review state.
+
+AI output must parse as an `openworkflowdoctor.ai-patch-proposal.v1` candidate and pass deterministic semantic validation before it can be previewed. The v0.4 AI-allowed operation set is intentionally small: `insert_error_branch`, `insert_branch_route`, `insert_node_after` with OpenWorkflowDoctor synthetic node types, and `update_node_parameters` only for HTTP `timeout` values from 1000 to 120000. Unsupported operations, stale fingerprints, unmapped targets, duplicate new node ids, existing branch routes, unsupported node types, unsupported parameters, and `idempotencyKey` updates are represented as deterministic `PatchConflict` records.
+
+Previewing an AI proposal still uses the deterministic patch engine, diagnostics, verifier, and human review flow. AI never applies patches, mutates raw n8n JSON, changes verifier status, changes `humanReviewValidation`, executes workflows, calls production n8n, or exports n8n-importable patches. Review Packets record AI-assisted proposal provenance without storing raw prompts, raw responses, API keys, provider endpoints, or provider configuration.
+
 ## v0.1 Demo Boundary
 
 v0.1 is a local static analysis and review artifact demo:

@@ -294,6 +294,85 @@ describe("local workspace repository", () => {
     ).toThrow("Invalid WorkflowDocument.");
   });
 
+  test("persists AI patch proposal state per workflow without leaking raw model or provider data", async () => {
+    const repository = createMemoryWorkspaceRepository();
+    await repository.initialize();
+    const firstWorkflow = parseN8nWorkflow(branchWorkflow);
+    const secondWorkflow = {
+      ...firstWorkflow,
+      id: "second-workflow",
+      name: "Second Workflow"
+    };
+    const firstDocument = createWorkflowDocumentFromWorkflowIr({
+      workflow: firstWorkflow,
+      sourceKind: "imported-file",
+      sourceLabel: "first.json"
+    });
+    const secondDocument = createWorkflowDocumentFromWorkflowIr({
+      workflow: secondWorkflow,
+      sourceKind: "sample",
+      sourceLabel: "second.json"
+    });
+
+    expect(firstDocument.aiPatchProposalState).toEqual({ status: "idle" });
+
+    await repository.saveWorkflowDocument(firstDocument);
+    await repository.saveWorkflowDocument(secondDocument);
+    await repository.updateWorkflowDocument(firstDocument.id, (current) => ({
+      ...current,
+      aiPatchProposalState: {
+        status: "ready",
+        generatedAt: "2026-06-24T00:00:00.000Z",
+        inputFingerprint: "aip1-test",
+        candidate: {
+          schemaVersion: "openworkflowdoctor.ai-patch-proposal.v1",
+          source: "ai",
+          createdAt: "2026-06-24T00:00:00.000Z",
+          inputFingerprint: "aip1-test",
+          proposal: {
+            summary: "No operation needed.",
+            operations: [],
+            risksAddressed: [],
+            expectedImpact: [],
+            risksIntroduced: [],
+            requiresHumanReview: true
+          },
+          conflicts: [],
+          safetyNotes: ["Review only."]
+        }
+      }
+    }));
+
+    expect((await repository.getWorkflowDocument(firstDocument.id))?.aiPatchProposalState.status).toBe("ready");
+    expect((await repository.getWorkflowDocument(secondDocument.id))?.aiPatchProposalState).toEqual({ status: "idle" });
+    expect(JSON.stringify(await repository.getWorkflowDocument(firstDocument.id))).not.toContain("rawPrompt");
+    expect(JSON.stringify(await repository.getWorkflowDocument(firstDocument.id))).not.toContain("rawResponse");
+    expect(JSON.stringify(await repository.getWorkflowDocument(firstDocument.id))).not.toContain("sk-provider-secret");
+  });
+
+  test("rejects unsafe AI patch proposal workspace fields", () => {
+    const workflow = parseN8nWorkflow(branchWorkflow);
+    const document = createWorkflowDocumentFromWorkflowIr({
+      workflow,
+      sourceKind: "imported-file",
+      sourceLabel: "refund.json"
+    });
+
+    expect(() =>
+      parseWorkflowDocument({
+        ...document,
+        aiPatchProposalState: {
+          status: "ready",
+          rawPrompt: "do not store",
+          rawResponse: "do not store",
+          provider: {
+            apiKey: "sk-provider-secret"
+          }
+        }
+      })
+    ).toThrow("Invalid WorkflowDocument.");
+  });
+
   test("clears workflow data without clearing local settings", async () => {
     const repository = createMemoryWorkspaceRepository();
     const storage = new MemoryStorage();

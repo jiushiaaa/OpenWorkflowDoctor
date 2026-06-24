@@ -1,16 +1,35 @@
 import type {
+  AiPatchProposalCandidate,
   DoctorReport,
   DoctorReviewPacket,
   HumanReview,
   HumanReviewDecision,
   WorkflowIR
 } from "@openworkflowdoctor/workflow-ir";
+import { aiPatchProposalCandidateSchema } from "@openworkflowdoctor/workflow-ir";
 import { z } from "zod";
 
 export type WorkflowDocumentSourceKind = "imported-file" | "sample" | "migrated-v0.2";
 export type LatestReportState = "not-run" | "ready" | "stale";
 export type ReviewMode = "original" | "patched";
 export type WorkspaceConsoleTab = "summary" | "risks" | "ai" | "patch" | "verification" | "packet" | "logs";
+export type AiPatchProposalStateStatus =
+  | "idle"
+  | "generating"
+  | "ready"
+  | "validation_failed"
+  | "conflict"
+  | "provider_unavailable"
+  | "error"
+  | "stale";
+
+export type AiPatchProposalState = {
+  status: AiPatchProposalStateStatus;
+  candidate?: AiPatchProposalCandidate;
+  safeError?: string;
+  generatedAt?: string;
+  inputFingerprint?: string;
+};
 
 export type LocalWorkspace = {
   schemaVersion: "openworkflowdoctor.workspace.v1";
@@ -39,6 +58,7 @@ export type WorkflowDocument = {
   activeTab: WorkspaceConsoleTab;
   selectedNodeId: string | null;
   reviewPacketArtifactIds: string[];
+  aiPatchProposalState: AiPatchProposalState;
 };
 
 export type ReviewPacketArtifact = {
@@ -100,6 +120,16 @@ const workspaceConsoleTabSchema = z.enum(["summary", "risks", "ai", "patch", "ve
 const sourceKindSchema = z.enum(["imported-file", "sample", "migrated-v0.2"]);
 const nodeTypeFamilySchema = z.enum(["known", "unknown"]);
 const parameterValueTypeSchema = z.enum(["array", "boolean", "null", "number", "object", "string", "unknown"]);
+const aiPatchProposalStateStatusSchema = z.enum([
+  "idle",
+  "generating",
+  "ready",
+  "validation_failed",
+  "conflict",
+  "provider_unavailable",
+  "error",
+  "stale"
+]);
 
 const nodeParameterSummarySchema = z.object({
   key: z.string().min(1),
@@ -138,6 +168,14 @@ const humanReviewSchema = z.object({
   confirmedChecklistItemIds: z.array(z.string())
 }).strict();
 
+const aiPatchProposalStateSchema = z.object({
+  status: aiPatchProposalStateStatusSchema,
+  candidate: aiPatchProposalCandidateSchema.optional(),
+  safeError: z.string().optional(),
+  generatedAt: z.string().optional(),
+  inputFingerprint: z.string().optional()
+}).strict();
+
 const localWorkspaceSchema = z.object({
   schemaVersion: z.literal("openworkflowdoctor.workspace.v1"),
   id: z.string().min(1),
@@ -164,7 +202,8 @@ const workflowDocumentSchema = z.object({
   reviewMode: reviewModeSchema,
   activeTab: workspaceConsoleTabSchema,
   selectedNodeId: z.string().min(1).nullable(),
-  reviewPacketArtifactIds: z.array(z.string().min(1))
+  reviewPacketArtifactIds: z.array(z.string().min(1)),
+  aiPatchProposalState: aiPatchProposalStateSchema
 }).strict();
 
 const reviewPacketArtifactSchema = z.object({
@@ -197,7 +236,8 @@ export function createWorkflowDocumentFromWorkflowIr(input: WorkflowDocumentInpu
     reviewMode: "original",
     activeTab: "summary",
     selectedNodeId: workflow.nodes[0]?.id ?? null,
-    reviewPacketArtifactIds: []
+    reviewPacketArtifactIds: [],
+    aiPatchProposalState: createEmptyAiPatchProposalState()
   };
 }
 
@@ -225,6 +265,12 @@ export function createEmptyHumanReview(decision: HumanReviewDecision = "undecide
     decision,
     reviewerNote: "",
     confirmedChecklistItemIds: []
+  };
+}
+
+export function createEmptyAiPatchProposalState(): AiPatchProposalState {
+  return {
+    status: "idle"
   };
 }
 

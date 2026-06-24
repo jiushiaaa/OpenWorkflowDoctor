@@ -1,5 +1,5 @@
 import { z } from "zod";
-import type { DoctorReviewPacket, PatchProposal, VerificationReport } from "./types.js";
+import type { AiPatchProposalCandidate, DoctorReviewPacket, PatchProposal, VerificationReport } from "./types.js";
 
 export const riskSeveritySchema = z.enum(["low", "medium", "high", "critical"]);
 export const verificationStatusSchema = z.enum(["pass", "hold", "fail"]);
@@ -60,6 +60,38 @@ export const patchProposalSchema = z
     requiresHumanReview: z.literal(true)
   })
   .strict();
+
+export const patchConflictSchema = z.object({
+  id: z.string().min(1),
+  severity: z.enum(["info", "hold", "blocker"]),
+  operationIndexes: z.array(z.number().int().nonnegative()),
+  targetNodeId: z.string().min(1).optional(),
+  issueId: z.string().min(1).optional(),
+  code: z.enum([
+    "target_missing",
+    "duplicate_new_node_id",
+    "branch_route_exists",
+    "unsupported_operation",
+    "unsupported_node_type",
+    "unsupported_parameter",
+    "stale_report",
+    "overlapping_operation",
+    "unmapped_ai_reference",
+    "semantic_validation_failed"
+  ]),
+  explanation: z.string().min(1)
+}).strict();
+
+export const aiPatchProposalCandidateSchema = z.object({
+  schemaVersion: z.literal("openworkflowdoctor.ai-patch-proposal.v1"),
+  source: z.literal("ai"),
+  createdAt: z.string().min(1),
+  inputFingerprint: z.string().min(1),
+  modelLabel: z.string().min(1).optional(),
+  proposal: patchProposalSchema,
+  conflicts: z.array(patchConflictSchema),
+  safetyNotes: z.array(z.string())
+}).strict();
 
 export const verificationGateSchema = z.object({
   id: z.string().min(1),
@@ -137,6 +169,19 @@ const patchDiffLineSchema = z.object({
   details: z.array(z.string())
 }).strict();
 
+const patchProposalSourceSchema = z.object({
+  kind: z.enum(["deterministic", "ai-assisted"]),
+  generatedAt: z.string().min(1).optional(),
+  inputFingerprint: z.string().min(1).optional(),
+  modelLabel: z.string().min(1).optional(),
+  validation: z.object({
+    schema: verificationStatusSchema,
+    semantic: verificationStatusSchema,
+    conflictStatus: z.enum(["none", "info", "hold", "blocker"])
+  }).strict().optional(),
+  safetyNotes: z.array(z.string())
+}).strict();
+
 const humanReviewSchema = z.object({
   decision: z.enum(["undecided", "accepted", "held", "rejected"]),
   reviewerNote: z.string(),
@@ -184,6 +229,7 @@ export const doctorReviewPacketSchema = z.object({
   }).strict(),
   patch: z.object({
     proposal: patchProposalSchema,
+    proposalSource: patchProposalSourceSchema.optional(),
     patchDiff: z.array(patchDiffLineSchema),
     patchedWorkflow: workflowIrSchema,
     patchedSummary: workflowSummarySchema,
@@ -203,6 +249,17 @@ export function parsePatchProposal(value: unknown): PatchProposal {
   return result.data as PatchProposal;
 }
 
+export function parseAiPatchProposalCandidate(value: unknown): AiPatchProposalCandidate {
+  const result = aiPatchProposalCandidateSchema.safeParse(value);
+  if (!result.success) {
+    if (isRecord(value) && isRecord(value.proposal) && value.proposal.requiresHumanReview === false) {
+      throw new Error("PatchProposal must require human review.");
+    }
+    throw new Error("Invalid AI PatchProposal.");
+  }
+  return result.data as AiPatchProposalCandidate;
+}
+
 export function parseVerificationReport(value: unknown): VerificationReport {
   const result = verificationReportSchema.safeParse(value);
   if (!result.success) {
@@ -220,5 +277,9 @@ export function parseDoctorReviewPacket(value: unknown): DoctorReviewPacket {
 }
 
 function isObject(value: unknown): value is { requiresHumanReview?: unknown } {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
