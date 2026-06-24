@@ -140,6 +140,26 @@ export function normalizeRepeat(value) {
   return Math.min(parsed, 5);
 }
 
+export function resolveManualProviderConfig(env) {
+  const preset = resolveManualProviderPreset(env.OPENWORKFLOWDOCTOR_AI_PROVIDER_PRESET);
+  const baseUrl = env.OPENWORKFLOWDOCTOR_AI_BASE_URL?.trim() || preset?.defaultBaseUrl || "";
+  const model = env.OPENWORKFLOWDOCTOR_AI_MODEL?.trim() || preset?.modelExamples?.[0] || "";
+  const providerPreset = preset?.id || env.OPENWORKFLOWDOCTOR_AI_PROVIDER_PRESET?.trim() || "";
+  const transport = env.OPENWORKFLOWDOCTOR_AI_TRANSPORT
+    ? normalizeTransport(env.OPENWORKFLOWDOCTOR_AI_TRANSPORT, { baseUrl, providerPreset })
+    : preset?.defaultTransport || normalizeTransport(undefined, { baseUrl, providerPreset });
+  const responseFormat = normalizeResponseFormat(env.OPENWORKFLOWDOCTOR_AI_RESPONSE_FORMAT || preset?.defaultResponseFormat, transport);
+
+  return {
+    providerPreset,
+    baseUrl,
+    apiKey: env.OPENWORKFLOWDOCTOR_AI_API_KEY,
+    model,
+    transport,
+    responseFormat
+  };
+}
+
 export async function requestAiPatchProposal({ input, provider }) {
   const abortController = new AbortController();
   const timeout = setTimeout(() => abortController.abort(), provider.timeoutMs ?? 15_000);
@@ -210,6 +230,16 @@ export async function requestAiPatchProposal({ input, provider }) {
   }
 }
 
+function resolveManualProviderPreset(value) {
+  if (!value) {
+    return undefined;
+  }
+  const normalized = normalizePresetId(value);
+  return manualProviderPresets.find((preset) =>
+    preset.id === normalized || preset.aliases.some((alias) => normalizePresetId(alias) === normalized)
+  );
+}
+
 export function createEndpoint(baseUrl, transport) {
   const withoutTrailingSlash = baseUrl.trim().replace(/\/+$/u, "");
   if (transport === "chat_completions") {
@@ -223,8 +253,14 @@ export function createEndpoint(baseUrl, transport) {
     : `${withoutTrailingSlash}/responses`;
 }
 
-export function normalizeTransport(value) {
-  return value === "chat_completions" ? "chat_completions" : "responses";
+export function normalizeTransport(value, options = {}) {
+  if (value === "chat_completions" || value === "responses") {
+    return value;
+  }
+  if (isVolcengineArkProvider(options) || isAlibabaBailianProvider(options)) {
+    return "chat_completions";
+  }
+  return "responses";
 }
 
 export function normalizeResponseFormat(value, transport) {
@@ -897,6 +933,51 @@ function redactSecrets(value) {
     .replace(/token=[^&\s"]+/giu, "token=[redacted]");
 }
 
+function isVolcengineArkProvider(options) {
+  const preset = String(options.providerPreset ?? "").trim().toLowerCase();
+  const baseUrl = String(options.baseUrl ?? "").trim().toLowerCase();
+  return preset === "volcengine_ark" || baseUrl.includes("ark.cn-beijing.volces.com/api/v3");
+}
+
+function isAlibabaBailianProvider(options) {
+  const preset = String(options.providerPreset ?? "").trim().toLowerCase();
+  const baseUrl = String(options.baseUrl ?? "").trim().toLowerCase();
+  return preset === "alibaba_bailian" || preset === "dashscope" || (
+    baseUrl.includes("dashscope") && baseUrl.includes("/compatible-mode/v1")
+  );
+}
+
+function normalizePresetId(value) {
+  return value.trim().toLowerCase().replace(/_/gu, "-");
+}
+
 function isRecord(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
+
+const manualProviderPresets = [
+  {
+    id: "novai",
+    defaultBaseUrl: "https://us.novaiapi.com/v1",
+    defaultTransport: "chat_completions",
+    defaultResponseFormat: "json_object",
+    modelExamples: ["gemini-3-pro-preview"],
+    aliases: []
+  },
+  {
+    id: "volcengine-ark",
+    defaultBaseUrl: "https://ark.cn-beijing.volces.com/api/v3",
+    defaultTransport: "chat_completions",
+    defaultResponseFormat: "json_object",
+    modelExamples: ["doubao-seed-2-0-pro-260215"],
+    aliases: ["volcengine_ark", "ark"]
+  },
+  {
+    id: "alibaba-bailian",
+    defaultBaseUrl: "https://dashscope.aliyuncs.com/compatible-mode/v1",
+    defaultTransport: "chat_completions",
+    defaultResponseFormat: "json_object",
+    modelExamples: ["qwen3.7-plus"],
+    aliases: ["alibaba_bailian", "dashscope", "bailian"]
+  }
+];

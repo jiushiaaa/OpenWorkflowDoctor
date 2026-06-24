@@ -1,10 +1,12 @@
 import { describe, expect, test } from "vitest";
 import {
+  applyAiProviderPreset,
   clearAiCredentials,
   getAiProviderStatus,
   loadWorkbenchSettings,
   maskApiKey,
-  saveWorkbenchSettings
+  saveWorkbenchSettings,
+  toRequestProviderSettings
 } from "./settings";
 
 class MemoryStorage implements Storage {
@@ -66,6 +68,47 @@ describe("workbench settings storage", () => {
     expect(reloaded.ai.apiKey).toBe("sk-local-browser-only");
     expect(reloaded.ai.model).toBe("gpt-4.1-mini");
     expect(getAiProviderStatus(reloaded.ai)).toBe("configured");
+  });
+
+  test("applies provider presets without changing API key", () => {
+    const settings = loadWorkbenchSettings(new MemoryStorage());
+    const updated = applyAiProviderPreset(
+      {
+        ...settings.ai,
+        apiKey: "sk-local-browser-only"
+      },
+      "volcengine-ark"
+    );
+
+    expect(updated.providerPreset).toBe("volcengine-ark");
+    expect(updated.baseUrl).toBe("https://ark.cn-beijing.volces.com/api/v3");
+    expect(updated.transport).toBe("chat_completions");
+    expect(updated.responseFormat).toBe("json_object");
+    expect(updated.model).toBe("doubao-seed-2-0-pro-260215");
+    expect(updated.apiKey).toBe("sk-local-browser-only");
+  });
+
+  test("preserves user overrides and exports provider config without API key surprises", () => {
+    const settings = loadWorkbenchSettings(new MemoryStorage());
+    const updated = {
+      ...applyAiProviderPreset(settings.ai, "alibaba-bailian"),
+      baseUrl: "https://proxy.example.test/v1",
+      model: "custom-model",
+      transport: "responses" as const,
+      responseFormat: "json_schema" as const,
+      apiKey: "sk-local-browser-only"
+    };
+
+    expect(toRequestProviderSettings(updated)).toEqual({
+      enabled: true,
+      providerType: "openai-compatible",
+      providerPreset: "alibaba-bailian",
+      baseUrl: "https://proxy.example.test/v1",
+      apiKey: "sk-local-browser-only",
+      model: "custom-model",
+      transport: "responses",
+      responseFormat: "json_schema"
+    });
   });
 
   test("masks and clears API keys", () => {

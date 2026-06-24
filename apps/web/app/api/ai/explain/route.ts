@@ -11,9 +11,12 @@ import { z } from "zod";
 const aiProviderRequestSchema = z.object({
   enabled: z.boolean().optional().default(true),
   providerType: z.literal("openai-compatible").optional().default("openai-compatible"),
+  providerPreset: z.string().optional(),
   baseUrl: z.string().optional(),
   apiKey: z.string().optional(),
-  model: z.string().optional()
+  model: z.string().optional(),
+  transport: z.enum(["responses", "chat_completions"]).optional().default("responses"),
+  responseFormat: z.enum(["none", "json_object", "json_schema"]).optional().default("json_schema")
 });
 
 const explainRequestSchema = z.object({
@@ -29,8 +32,10 @@ export async function POST(request: Request) {
     apiKey?: string;
     model?: string;
     endpoint?: string;
+    transport?: "responses" | "chat_completions";
+    responseFormat?: "none" | "json_object" | "json_schema";
   } = {};
-  const endpoint = createResponsesEndpoint(providerConfig?.baseUrl);
+  const endpoint = createProviderEndpoint(providerConfig?.baseUrl, providerConfig?.transport);
 
   if (providerConfig?.apiKey !== undefined) {
     providerOptions.apiKey = providerConfig.apiKey;
@@ -40,6 +45,12 @@ export async function POST(request: Request) {
   }
   if (endpoint !== undefined) {
     providerOptions.endpoint = endpoint;
+  }
+  if (providerConfig?.transport !== undefined) {
+    providerOptions.transport = providerConfig.transport;
+  }
+  if (providerConfig?.responseFormat !== undefined) {
+    providerOptions.responseFormat = providerConfig.responseFormat;
   }
 
   const provider =
@@ -62,14 +73,18 @@ export async function POST(request: Request) {
   }
 }
 
-function createResponsesEndpoint(baseUrl: string | undefined): string | undefined {
+function createProviderEndpoint(baseUrl: string | undefined, transport: "responses" | "chat_completions" | undefined): string | undefined {
   const trimmed = baseUrl?.trim();
   if (!trimmed) {
     return undefined;
   }
 
   const withoutTrailingSlash = trimmed.replace(/\/+$/u, "");
-  return withoutTrailingSlash.endsWith("/responses")
-    ? withoutTrailingSlash
-    : `${withoutTrailingSlash}/responses`;
+  if (transport === "chat_completions") {
+    return withoutTrailingSlash.endsWith("/chat/completions")
+      ? withoutTrailingSlash
+      : `${withoutTrailingSlash}/chat/completions`;
+  }
+
+  return withoutTrailingSlash.endsWith("/responses") ? withoutTrailingSlash : `${withoutTrailingSlash}/responses`;
 }

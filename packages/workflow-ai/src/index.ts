@@ -1,4 +1,6 @@
 import { z } from "zod";
+import type { AiProviderResponseFormat, AiProviderTransport } from "./provider-registry.js";
+export * from "./provider-registry.js";
 import type {
   AiPatchProposalCandidate,
   AiPatchProposalInput,
@@ -146,6 +148,8 @@ export type OpenAiProviderOptions = {
   apiKey: string;
   model?: string;
   endpoint?: string;
+  transport?: AiProviderTransport;
+  responseFormat?: AiProviderResponseFormat;
   fetchImplementation?: typeof fetch;
   timeoutMs?: number;
 };
@@ -154,6 +158,8 @@ export class OpenAiProvider implements AiProvider {
   private readonly apiKey: string;
   private readonly model: string;
   private readonly endpoint: string;
+  private readonly transport: AiProviderTransport;
+  private readonly responseFormat: AiProviderResponseFormat;
   private readonly fetchImplementation: typeof fetch;
   private readonly timeoutMs: number;
 
@@ -161,6 +167,8 @@ export class OpenAiProvider implements AiProvider {
     this.apiKey = options.apiKey;
     this.model = options.model ?? "gpt-4.1-mini";
     this.endpoint = options.endpoint ?? "https://api.openai.com/v1/responses";
+    this.transport = options.transport ?? "responses";
+    this.responseFormat = options.responseFormat ?? "json_schema";
     this.fetchImplementation = options.fetchImplementation ?? fetch;
     this.timeoutMs = options.timeoutMs ?? 15_000;
   }
@@ -179,8 +187,12 @@ export class OpenAiProvider implements AiProvider {
         },
         body: JSON.stringify({
           model: this.model,
-          store: false,
-          input: [
+          ...createModelRequestScaffold({
+            transport: this.transport,
+            responseFormat: this.responseFormat,
+            schemaName: "workflow_explanation",
+            schema: workflowExplanationJsonSchema,
+            messages: [
             {
               role: "system",
               content:
@@ -194,15 +206,8 @@ export class OpenAiProvider implements AiProvider {
                 safeInput: input
               })
             }
-          ],
-          text: {
-            format: {
-              type: "json_schema",
-              name: "workflow_explanation",
-              strict: true,
-              schema: workflowExplanationJsonSchema
-            }
-          }
+            ]
+          })
         })
       });
 
@@ -242,8 +247,12 @@ export class OpenAiProvider implements AiProvider {
         },
         body: JSON.stringify({
           model: this.model,
-          store: false,
-          input: [
+          ...createModelRequestScaffold({
+            transport: this.transport,
+            responseFormat: this.responseFormat,
+            schemaName: "ai_patch_proposal",
+            schema: aiPatchProposalJsonSchema,
+            messages: [
             {
               role: "system",
               content:
@@ -257,15 +266,8 @@ export class OpenAiProvider implements AiProvider {
                 safeInput: input
               })
             }
-          ],
-          text: {
-            format: {
-              type: "json_schema",
-              name: "ai_patch_proposal",
-              strict: true,
-              schema: aiPatchProposalJsonSchema
-            }
-          }
+            ]
+          })
         })
       });
 
@@ -296,6 +298,8 @@ export function createOptionalOpenAiProvider(options: {
   apiKey?: string;
   model?: string;
   endpoint?: string;
+  transport?: AiProviderTransport;
+  responseFormat?: AiProviderResponseFormat;
   fetchImplementation?: typeof fetch;
   timeoutMs?: number;
 }): OpenAiProvider | null {
@@ -312,6 +316,12 @@ export function createOptionalOpenAiProvider(options: {
   }
   if (options.endpoint !== undefined) {
     providerOptions.endpoint = options.endpoint;
+  }
+  if (options.transport !== undefined) {
+    providerOptions.transport = options.transport;
+  }
+  if (options.responseFormat !== undefined) {
+    providerOptions.responseFormat = options.responseFormat;
   }
   if (options.fetchImplementation !== undefined) {
     providerOptions.fetchImplementation = options.fetchImplementation;
@@ -585,7 +595,7 @@ function extractOutputText(value: unknown): string | null {
   }
 
   if (!Array.isArray(value.output)) {
-    return null;
+    return extractChatOutputText(value);
   }
 
   for (const outputItem of value.output) {
@@ -601,6 +611,101 @@ function extractOutputText(value: unknown): string | null {
   }
 
   return null;
+}
+
+function extractChatOutputText(value: Record<string, unknown>): string | null {
+  if (!Array.isArray(value.choices)) {
+    return null;
+  }
+
+  const firstChoice = value.choices[0];
+  if (!isRecord(firstChoice) || !isRecord(firstChoice.message)) {
+    return null;
+  }
+
+  const content = firstChoice.message.content;
+  if (typeof content === "string") {
+    return content;
+  }
+  if (Array.isArray(content)) {
+    const parts = content
+      .map((part) => (isRecord(part) && typeof part.text === "string" ? part.text : ""))
+      .filter(Boolean);
+    return parts.length > 0 ? parts.join("") : null;
+  }
+
+  return null;
+}
+
+function createModelRequestScaffold({
+  transport,
+  responseFormat,
+  schemaName,
+  schema,
+  messages
+}: {
+  transport: AiProviderTransport;
+  responseFormat: AiProviderResponseFormat;
+  schemaName: string;
+  schema: object;
+  messages: Array<{ role: "system" | "user"; content: string }>;
+}) {
+  if (transport === "chat_completions") {
+    return {
+      messages,
+      ...createChatResponseFormat(responseFormat, schemaName, schema)
+    };
+  }
+
+  return {
+    store: false,
+    input: messages,
+    ...createResponsesTextFormat(responseFormat, schemaName, schema)
+  };
+}
+
+function createChatResponseFormat(responseFormat: AiProviderResponseFormat, schemaName: string, schema: object) {
+  if (responseFormat === "none") {
+    return {};
+  }
+  if (responseFormat === "json_schema") {
+    return {
+      response_format: {
+        type: "json_schema",
+        json_schema: {
+          name: schemaName,
+          strict: true,
+          schema
+        }
+      }
+    };
+  }
+  return { response_format: { type: "json_object" } };
+}
+
+function createResponsesTextFormat(responseFormat: AiProviderResponseFormat, schemaName: string, schema: object) {
+  if (responseFormat === "none") {
+    return {};
+  }
+  if (responseFormat === "json_object") {
+    return {
+      text: {
+        format: {
+          type: "json_object"
+        }
+      }
+    };
+  }
+  return {
+    text: {
+      format: {
+        type: "json_schema",
+        name: schemaName,
+        strict: true,
+        schema
+      }
+    }
+  };
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

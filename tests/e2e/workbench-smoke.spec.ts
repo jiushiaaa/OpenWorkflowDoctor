@@ -23,12 +23,24 @@ test("workbench supports the deterministic v0.2 review packet demo flow", async 
 
   await page.getByRole("button", { name: "设置" }).click();
   const settingsModal = page.getByRole("dialog", { name: "设置" });
+  const providerSelect = settingsModal.getByLabel("Provider", { exact: true });
   await expect(settingsModal).toBeVisible();
   await expect(settingsModal.getByLabel("语言")).toHaveValue("zh-CN");
+  await expect(providerSelect).toHaveValue("openai");
   await expect(settingsModal.getByLabel("Provider 类型")).toHaveValue("openai-compatible");
   await expect(settingsModal.getByLabel("Base URL")).toHaveValue("https://api.openai.com/v1");
   await expect(settingsModal.getByLabel("API Key")).toHaveAttribute("type", "password");
   await expect(settingsModal.getByLabel("模型")).toHaveValue("gpt-4.1-mini");
+  await expect(settingsModal.getByLabel("Transport")).toHaveValue("responses");
+  await expect(settingsModal.getByLabel("Response Format")).toHaveValue("json_schema");
+  await providerSelect.selectOption("volcengine-ark");
+  await expect(settingsModal.getByText("Verified", { exact: true })).toBeVisible();
+  await expect(settingsModal.getByLabel("Base URL")).toHaveValue("https://ark.cn-beijing.volces.com/api/v3");
+  await expect(settingsModal.getByLabel("模型")).toHaveValue("doubao-seed-2-0-pro-260215");
+  await expect(settingsModal.getByLabel("Transport")).toHaveValue("chat_completions");
+  await expect(settingsModal.getByLabel("Response Format")).toHaveValue("json_object");
+  await settingsModal.getByLabel("模型").fill("custom-ark-endpoint");
+  await expect(settingsModal.getByLabel("模型")).toHaveValue("custom-ark-endpoint");
   await expect(settingsModal.getByText("API key 会为了本地优先使用而存储在此浏览器中。")).toBeVisible();
   await expect(settingsModal.getByText("仅本地静态审查")).toBeVisible();
   await settingsModal.getByLabel("主题").selectOption("dark");

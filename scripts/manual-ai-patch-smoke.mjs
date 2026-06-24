@@ -1,15 +1,14 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { buildAggregateSummary, createSelectedRuns, normalizeResponseFormat, normalizeTransport, runManualAiPatchCase } from "./manual-ai-patch-smoke-lib.mjs";
+import { buildAggregateSummary, createSelectedRuns, resolveManualProviderConfig, runManualAiPatchCase } from "./manual-ai-patch-smoke-lib.mjs";
 
-const requiredEnvVars = [
-  "OPENWORKFLOWDOCTOR_AI_BASE_URL",
-  "OPENWORKFLOWDOCTOR_AI_API_KEY",
-  "OPENWORKFLOWDOCTOR_AI_MODEL"
-];
-
-const missingEnvVars = requiredEnvVars.filter((key) => !process.env[key]?.trim());
+const providerConfig = resolveManualProviderConfig(process.env);
+const missingEnvVars = [
+  !providerConfig.baseUrl ? "OPENWORKFLOWDOCTOR_AI_BASE_URL or OPENWORKFLOWDOCTOR_AI_PROVIDER_PRESET" : "",
+  !providerConfig.apiKey?.trim() ? "OPENWORKFLOWDOCTOR_AI_API_KEY" : "",
+  !providerConfig.model ? "OPENWORKFLOWDOCTOR_AI_MODEL or OPENWORKFLOWDOCTOR_AI_PROVIDER_PRESET" : ""
+].filter(Boolean);
 
 if (missingEnvVars.length > 0) {
   console.log("Skipped manual AI patch smoke test.");
@@ -20,8 +19,6 @@ if (missingEnvVars.length > 0) {
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const sampleWorkflowPath = path.join(repoRoot, "samples", "n8n", "refund-risky.workflow.json");
-const transport = normalizeTransport(process.env.OPENWORKFLOWDOCTOR_AI_TRANSPORT);
-const responseFormat = normalizeResponseFormat(process.env.OPENWORKFLOWDOCTOR_AI_RESPONSE_FORMAT, transport);
 
 const testCases = [
   {
@@ -70,12 +67,12 @@ try {
   const rawWorkflow = JSON.parse(await readFile(sampleWorkflowPath, "utf8"));
   const workflow = parseN8nWorkflow(rawWorkflow);
   const provider = {
-    label: "openai-compatible",
-    baseUrl: process.env.OPENWORKFLOWDOCTOR_AI_BASE_URL,
-    apiKey: process.env.OPENWORKFLOWDOCTOR_AI_API_KEY,
-    model: process.env.OPENWORKFLOWDOCTOR_AI_MODEL,
-    transport,
-    responseFormat,
+    label: providerConfig.providerPreset || "openai-compatible",
+    baseUrl: providerConfig.baseUrl,
+    apiKey: providerConfig.apiKey,
+    model: providerConfig.model,
+    transport: providerConfig.transport,
+    responseFormat: providerConfig.responseFormat,
     timeoutMs: parseTimeoutMs(process.env.OPENWORKFLOWDOCTOR_AI_TIMEOUT_MS),
     debug: process.env.DEBUG_AI_PATCH === "1",
     fetchImplementation: fetch

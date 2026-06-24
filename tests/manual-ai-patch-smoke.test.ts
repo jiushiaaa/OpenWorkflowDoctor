@@ -111,6 +111,52 @@ describe("manual AI patch smoke script", () => {
       "prompt_injection:1"
     ]);
   });
+
+  test("defaults Volcengine Ark providers to chat completions transport", async () => {
+    const { normalizeTransport } = await loadSmokeLib();
+
+    expect(normalizeTransport(undefined, {
+      baseUrl: "https://ark.cn-beijing.volces.com/api/v3"
+    })).toBe("chat_completions");
+    expect(normalizeTransport(undefined, {
+      providerPreset: "volcengine_ark"
+    })).toBe("chat_completions");
+    expect(normalizeTransport("responses", {
+      baseUrl: "https://ark.cn-beijing.volces.com/api/v3"
+    })).toBe("responses");
+  });
+
+  test("defaults Alibaba Bailian providers to chat completions transport", async () => {
+    const { normalizeTransport } = await loadSmokeLib();
+
+    expect(normalizeTransport(undefined, {
+      baseUrl: "https://dashscope.aliyuncs.com/compatible-mode/v1"
+    })).toBe("chat_completions");
+    expect(normalizeTransport(undefined, {
+      baseUrl: "https://dashscope-intl.aliyuncs.com/compatible-mode/v1"
+    })).toBe("chat_completions");
+    expect(normalizeTransport(undefined, {
+      providerPreset: "alibaba_bailian"
+    })).toBe("chat_completions");
+    expect(normalizeTransport("responses", {
+      providerPreset: "alibaba_bailian"
+    })).toBe("responses");
+  });
+
+  test("resolves provider preset defaults for manual smoke runs", async () => {
+    const { resolveManualProviderConfig } = await loadSmokeLib();
+    const resolved = resolveManualProviderConfig({
+      OPENWORKFLOWDOCTOR_AI_PROVIDER_PRESET: "alibaba_bailian",
+      OPENWORKFLOWDOCTOR_AI_API_KEY: "sk-local-test",
+      OPENWORKFLOWDOCTOR_AI_CASE: "normal_timeout_repair"
+    });
+
+    expect(resolved.providerPreset).toBe("alibaba-bailian");
+    expect(resolved.baseUrl).toBe("https://dashscope.aliyuncs.com/compatible-mode/v1");
+    expect(resolved.model).toBe("qwen3.7-plus");
+    expect(resolved.transport).toBe("chat_completions");
+    expect(resolved.responseFormat).toBe("json_object");
+  });
 });
 
 describe("manual AI patch smoke diagnostics", () => {

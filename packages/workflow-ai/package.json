@@ -7,8 +7,12 @@
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
-      "default": "./dist/index.js"
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    },
+    "./provider-registry": {
+      "types": "./src/provider-registry.ts",
+      "default": "./src/provider-registry.ts"
     }
   },
   "scripts": {

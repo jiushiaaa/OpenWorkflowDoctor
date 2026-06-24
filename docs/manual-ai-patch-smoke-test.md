@@ -2,6 +2,8 @@
 
 This smoke test is optional. It is not part of default CI, and normal tests do not require an AI API key.
 
+Provider presets are listed in [Provider Presets and Compatibility Registry](./provider-presets-compatibility.md).
+
 Mock and deterministic tests remain the automated correctness source. This manual smoke only checks that a real OpenAI-compatible model can move safely through the v0.4 AI Patch Proposal chain:
 
 ```text
@@ -22,6 +24,7 @@ Set these variables only in your local shell. Do not commit them.
 OPENWORKFLOWDOCTOR_AI_BASE_URL="https://api.openai.com/v1"
 OPENWORKFLOWDOCTOR_AI_API_KEY="..."
 OPENWORKFLOWDOCTOR_AI_MODEL="gpt-4.1-mini"
+OPENWORKFLOWDOCTOR_AI_PROVIDER_PRESET=""
 OPENWORKFLOWDOCTOR_AI_TRANSPORT="responses"
 OPENWORKFLOWDOCTOR_AI_RESPONSE_FORMAT="json_object"
 OPENWORKFLOWDOCTOR_AI_TIMEOUT_MS="15000"
@@ -31,16 +34,89 @@ OPENWORKFLOWDOCTOR_AI_REPEAT="1"
 
 The script appends `/responses` when the base URL does not already end with `/responses`.
 
+`OPENWORKFLOWDOCTOR_AI_PROVIDER_PRESET` is optional:
+
+- `volcengine_ark`: treats Volcengine Ark as an OpenAI-compatible Chat Completions provider by default.
+- `alibaba_bailian`: treats Alibaba Cloud Bailian / DashScope as an OpenAI-compatible Chat Completions provider by default.
+
 `OPENWORKFLOWDOCTOR_AI_TRANSPORT` is optional:
 
 - `responses` uses the OpenAI Responses endpoint family. This is the default.
 - `chat_completions` uses the OpenAI Chat Completions endpoint family.
+
+If `OPENWORKFLOWDOCTOR_AI_TRANSPORT` is not set, Volcengine Ark is auto-detected from either:
+
+- `OPENWORKFLOWDOCTOR_AI_PROVIDER_PRESET="volcengine_ark"`
+- `OPENWORKFLOWDOCTOR_AI_BASE_URL="https://ark.cn-beijing.volces.com/api/v3"`
+
+In that case, the script defaults to `chat_completions`, because Ark's OpenAI-compatible path uses `/chat/completions`.
+
+Alibaba Cloud Bailian / DashScope is also auto-detected from either:
+
+- `OPENWORKFLOWDOCTOR_AI_PROVIDER_PRESET="alibaba_bailian"`
+- `OPENWORKFLOWDOCTOR_AI_BASE_URL` containing `dashscope` and `/compatible-mode/v1`
+
+In that case, the script defaults to `chat_completions`, because Bailian's OpenAI-compatible chat path uses `/chat/completions`.
 
 For Chat Completions compatibility testing:
 
 ```bash
 OPENWORKFLOWDOCTOR_AI_TRANSPORT="chat_completions"
 ```
+
+For Volcengine Ark:
+
+```bash
+OPENWORKFLOWDOCTOR_AI_PROVIDER_PRESET="volcengine_ark"
+OPENWORKFLOWDOCTOR_AI_BASE_URL="https://ark.cn-beijing.volces.com/api/v3"
+OPENWORKFLOWDOCTOR_AI_MODEL="doubao-seed-2-0-pro-260215"
+OPENWORKFLOWDOCTOR_AI_RESPONSE_FORMAT="json_object"
+OPENWORKFLOWDOCTOR_AI_TIMEOUT_MS="120000"
+OPENWORKFLOWDOCTOR_AI_CASE="normal_timeout_repair"
+OPENWORKFLOWDOCTOR_AI_REPEAT="3"
+```
+
+PowerShell:
+
+```powershell
+$env:OPENWORKFLOWDOCTOR_AI_PROVIDER_PRESET='volcengine_ark'
+$env:OPENWORKFLOWDOCTOR_AI_BASE_URL='https://ark.cn-beijing.volces.com/api/v3'
+$env:OPENWORKFLOWDOCTOR_AI_MODEL='doubao-seed-2-0-pro-260215'
+$env:OPENWORKFLOWDOCTOR_AI_RESPONSE_FORMAT='json_object'
+$env:OPENWORKFLOWDOCTOR_AI_TIMEOUT_MS='120000'
+$env:OPENWORKFLOWDOCTOR_AI_CASE='normal_timeout_repair'
+$env:OPENWORKFLOWDOCTOR_AI_REPEAT='3'
+npm run test:ai:manual
+```
+
+`doubao-seed-2-0-pro-260215` has been verified with the manual smoke. Other Ark model IDs may require the exact callable model ID or endpoint ID from your console. A 404 from Ark usually means the current key, region, model ID, or endpoint ID combination is not callable; it is not a schema or verifier failure.
+
+For Alibaba Cloud Bailian / DashScope in China (Beijing):
+
+```bash
+OPENWORKFLOWDOCTOR_AI_PROVIDER_PRESET="alibaba_bailian"
+OPENWORKFLOWDOCTOR_AI_BASE_URL="https://dashscope.aliyuncs.com/compatible-mode/v1"
+OPENWORKFLOWDOCTOR_AI_MODEL="qwen3.7-plus"
+OPENWORKFLOWDOCTOR_AI_RESPONSE_FORMAT="json_object"
+OPENWORKFLOWDOCTOR_AI_TIMEOUT_MS="120000"
+OPENWORKFLOWDOCTOR_AI_CASE="normal_timeout_repair"
+OPENWORKFLOWDOCTOR_AI_REPEAT="3"
+```
+
+PowerShell:
+
+```powershell
+$env:OPENWORKFLOWDOCTOR_AI_PROVIDER_PRESET='alibaba_bailian'
+$env:OPENWORKFLOWDOCTOR_AI_BASE_URL='https://dashscope.aliyuncs.com/compatible-mode/v1'
+$env:OPENWORKFLOWDOCTOR_AI_MODEL='qwen3.7-plus'
+$env:OPENWORKFLOWDOCTOR_AI_RESPONSE_FORMAT='json_object'
+$env:OPENWORKFLOWDOCTOR_AI_TIMEOUT_MS='120000'
+$env:OPENWORKFLOWDOCTOR_AI_CASE='normal_timeout_repair'
+$env:OPENWORKFLOWDOCTOR_AI_REPEAT='3'
+npm run test:ai:manual
+```
+
+`qwen3.7-plus` has been verified with the manual smoke using the China (Beijing) DashScope endpoint.
 
 `OPENWORKFLOWDOCTOR_AI_RESPONSE_FORMAT` is optional:
 

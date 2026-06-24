@@ -1,6 +1,14 @@
+import { listProviderPresets } from "@openworkflowdoctor/workflow-ai";
 import type { Language, Translator } from "../lib/i18n";
-import { maskApiKey, type ThemeMode, type WorkbenchSettings } from "../lib/settings";
+import {
+  applyAiProviderPreset,
+  maskApiKey,
+  type ThemeMode,
+  type WorkbenchSettings
+} from "../lib/settings";
 import { getSettingsTestStatusLabel, KeyValue, type SettingsTestStatus } from "./workbench-shared";
+
+const providerPresets = listProviderPresets();
 
 export function SettingsModal({
   settings,
@@ -23,6 +31,8 @@ export function SettingsModal({
   onClearWorkspaceData: () => void;
   onClose: () => void;
 }) {
+  const selectedProvider = getSelectedProvider(settings.ai.providerPreset);
+
   return (
     <div className="modal-overlay" role="presentation">
       <section className="settings-modal" role="dialog" aria-modal="true" aria-label={t("settings.title")}>
@@ -91,6 +101,31 @@ export function SettingsModal({
               <span>{t("settings.enableAi")}</span>
             </label>
             <label>
+              <span>{t("settings.providerPreset")}</span>
+              <select
+                aria-label={t("settings.providerPreset")}
+                value={settings.ai.providerPreset}
+                onChange={(event) =>
+                  onSettingsChange((current) => ({
+                    ...current,
+                    ai: applyAiProviderPreset(current.ai, event.target.value)
+                  }))
+                }
+              >
+                {providerPresets.map((provider) => (
+                  <option key={provider.id} value={provider.id}>
+                    {provider.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <div className="provider-preset-meta">
+              <span className={`provider-status provider-status-${selectedProvider.compatibility}`}>
+                {getProviderStatusLabel(selectedProvider.compatibility, t)}
+              </span>
+              <span>{selectedProvider.modelExamples.join(", ")}</span>
+            </div>
+            <label>
               <span>{t("settings.providerType")}</span>
               <select value={settings.ai.providerType} disabled>
                 <option value="openai-compatible">OpenAI-compatible</option>
@@ -147,6 +182,43 @@ export function SettingsModal({
                 }
               />
             </label>
+            <label>
+              <span>{t("settings.transport")}</span>
+              <select
+                value={settings.ai.transport}
+                onChange={(event) =>
+                  onSettingsChange((current) => ({
+                    ...current,
+                    ai: {
+                      ...current.ai,
+                      transport: event.target.value as WorkbenchSettings["ai"]["transport"]
+                    }
+                  }))
+                }
+              >
+                <option value="responses">responses</option>
+                <option value="chat_completions">chat_completions</option>
+              </select>
+            </label>
+            <label>
+              <span>{t("settings.responseFormat")}</span>
+              <select
+                value={settings.ai.responseFormat}
+                onChange={(event) =>
+                  onSettingsChange((current) => ({
+                    ...current,
+                    ai: {
+                      ...current.ai,
+                      responseFormat: event.target.value as WorkbenchSettings["ai"]["responseFormat"]
+                    }
+                  }))
+                }
+              >
+                <option value="none">none</option>
+                <option value="json_object">json_object</option>
+                <option value="json_schema">json_schema</option>
+              </select>
+            </label>
             <div className="settings-actions">
               <button type="button" onClick={onTestConnection} disabled={testStatus === "testing"}>
                 {t("actions.testConnection")}
@@ -190,4 +262,21 @@ export function SettingsModal({
       </section>
     </div>
   );
+}
+
+function getSelectedProvider(providerPreset: string) {
+  return providerPresets.find((provider) => provider.id === providerPreset) ?? providerPresets[0]!;
+}
+
+function getProviderStatusLabel(status: NonNullable<ReturnType<typeof getSelectedProvider>>["compatibility"], t: Translator) {
+  switch (status) {
+    case "verified":
+      return t("settings.providerStatusVerified");
+    case "preset":
+      return t("settings.providerStatusPreset");
+    case "experimental":
+      return t("settings.providerStatusExperimental");
+    default:
+      return t("settings.providerStatusCustom");
+  }
 }
