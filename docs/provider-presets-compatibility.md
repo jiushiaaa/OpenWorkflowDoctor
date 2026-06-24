@@ -34,8 +34,8 @@ Provider presets do not add AI Patch capabilities, loosen schemas, execute workf
 
 | Provider | Reason |
 | --- | --- |
-| Claude native | Native Anthropic Messages adapter is not implemented in v0.4.3. |
-| Gemini native | Native Gemini adapter is not implemented in v0.4.3. |
+| Claude native | Native Anthropic Messages adapter is not implemented in v0.4.4. |
+| Gemini native | Native Gemini adapter is not implemented in v0.4.4. |
 | Zhipu GLM | Endpoint and model ID are not verified yet. |
 
 ## Safety Boundary
@@ -45,4 +45,3 @@ Provider presets do not add AI Patch capabilities, loosen schemas, execute workf
 - Raw n8n JSON is not sent to AI providers.
 - AI output must still pass Zod schema validation.
 - Semantic validation, conflict detection, deterministic patch preview, verifier, and human review remain required.
-

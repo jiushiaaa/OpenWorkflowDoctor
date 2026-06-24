@@ -1,4 +1,4 @@
-# OpenWorkflowDoctor v0.4.3 Public Release Checklist
+# OpenWorkflowDoctor v0.4.4 Public Release Checklist
 
 Run these commands from the repository root before any public release commit:
 
@@ -14,16 +14,18 @@ Expected result: every command exits with code 0.
 
 ## Public docs checks
 
-- README names `v0.4.3` as the current stable release.
-- README includes a current workbench screenshot.
+- README names `v0.4.4` as the current stable release.
+- README includes a current demo GIF and workbench screenshot.
 - CHANGELOG lists all public tags and keeps AI trust boundaries explicit.
 - SECURITY documents local BYOK, WorkflowIR redaction, Review Packet exclusions, and AI provider boundaries.
 - ROADMAP keeps v0.5 read-only n8n import in design-first status.
 - GitHub release notes are available in `docs/github-release-notes.md`.
+- Demo and feedback guides are available in `docs/demo-guide.md` and `docs/feedback-guide.md`.
+- GitHub issue templates are available under `.github/ISSUE_TEMPLATE`.
 - Provider compatibility is documented in `docs/provider-presets-compatibility.md`.
 - Manual smoke instructions are documented in `docs/manual-ai-patch-smoke-test.md`.
 
-## v0.4.3 freeze checks
+## v0.4.4 freeze checks
 
 - Provider registry includes Verified, Preset, Experimental, and Custom tiers.
 - Settings provider dropdown uses provider presets.

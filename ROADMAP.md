@@ -4,7 +4,7 @@ OpenWorkflowDoctor is a local-first Workflow Review IDE for existing n8n workflo
 
 ## Current Stable Release
 
-`v0.4.3` is the current stable release: Provider Presets & Compatibility Registry.
+`v0.4.4` is the current stable release: Public Demo Polish.
 
 The current product loop is:
 
@@ -23,10 +23,29 @@ import exported n8n workflow
 
 ## Near-term Public Readiness
 
-- Keep README, CHANGELOG, SECURITY, release notes, demo script, and roadmap aligned with the latest stable release.
-- Add or refresh screenshots and short demo media.
+- Gather feedback from real n8n users before starting v0.5 implementation.
+- Validate whether users prefer exported JSON review, read-only n8n import, or deeper AI patch assistance.
 - Keep release notes explicit about AI and provider trust boundaries.
 - Do not add new runtime behavior during public-readiness cleanup.
+
+## v0.4.4 - Public Demo Polish
+
+Scope:
+
+- README first-screen clarity.
+- Short demo GIF.
+- Demo and feedback guides.
+- GitHub topics.
+- Issue templates.
+- Pinned roadmap issue.
+
+Non-goals:
+
+- Read-only n8n import.
+- Production n8n API connection.
+- Workflow execution.
+- Credential lookup or storage.
+- Automatic write-back.
 
 ## v0.5.0 - Planned: Read-only n8n Import
 

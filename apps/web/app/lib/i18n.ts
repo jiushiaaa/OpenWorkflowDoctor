@@ -4,7 +4,7 @@ export const DEFAULT_LANGUAGE: Language = "zh-CN";
 
 export const dictionaries = {
   "zh-CN": {
-    "app.version": "OpenWorkflowDoctor v0.4.3",
+    "app.version": "OpenWorkflowDoctor v0.4.4",
     "toolbar.commandPalette": "命令面板",
     "toolbar.settings": "设置",
     "toolbar.metrics.nodes": "节点",
@@ -258,7 +258,7 @@ export const dictionaries = {
     "severity.critical": "严重"
   },
   "en-US": {
-    "app.version": "OpenWorkflowDoctor v0.4.3",
+    "app.version": "OpenWorkflowDoctor v0.4.4",
     "toolbar.commandPalette": "Command Palette",
     "toolbar.settings": "Settings",
     "toolbar.metrics.nodes": "Nodes",

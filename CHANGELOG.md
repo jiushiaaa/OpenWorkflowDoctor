@@ -2,6 +2,20 @@
 
 All notable OpenWorkflowDoctor releases are listed here. OpenWorkflowDoctor reviews workflows; it does not run them.
 
+## v0.4.4 - Public Demo Polish
+
+- Tightened the README first screen around the core product boundary.
+- Added a short demo GIF.
+- Added a demo guide and feedback guide for first-time users.
+- Added GitHub issue templates for feedback and bug reports.
+- Added a pinned roadmap issue for v0.5 read-only n8n import.
+- Added repository topics for GitHub discovery.
+
+Trust boundaries:
+
+- No workflow runtime, production n8n connection, credential lookup, or write-back behavior was added.
+- AI still cannot mutate raw n8n JSON, apply patches, change verifier status, change human review, or bypass deterministic validation.
+
 ## v0.4.3 - Provider Presets & Compatibility Registry
 
 - Added the provider compatibility registry.

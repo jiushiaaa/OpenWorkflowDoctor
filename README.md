@@ -4,29 +4,26 @@ Local-first Workflow Review IDE for exported n8n workflows.
 
 OpenWorkflowDoctor reviews workflows. It does not run them.
 
-Current stable release: `v0.4.3` Provider Presets & Compatibility Registry.
+Current stable release: `v0.4.4` Public Demo Polish.
 
-It is not:
+It is not a workflow builder, workflow runtime, automatic n8n fixer, or production n8n connector.
 
-- a workflow builder
-- a workflow runtime
-- an automatic n8n fixer
-- a production n8n connector
+It turns exported n8n JSON into a secret-safe WorkflowIR, static risk report, structured patch preview, verifier result, human review checklist, and exportable Review Packet.
 
-It is:
+AI can explain and propose structured `PatchOperation` candidates, but deterministic validation, verifier gates, and human review remain required.
 
-- a workflow doctor for exported n8n JSON
-- a static diagnostics workbench
-- a secret-safe WorkflowIR review tool
-- a structured patch preview surface
-- a verifier review and human approval flow
-- a local workspace for multiple workflow reviews
+![OpenWorkflowDoctor demo](docs/assets/openworkflowdoctor-demo-v0.4.4.gif)
 
-The product is designed around one trust boundary: AI may explain and, in future versions, propose validated structured changes, but it must never directly mutate raw n8n JSON or decide final acceptance.
+## What It Does
+
+- Reviews exported n8n workflow JSON locally.
+- Shows graph structure, static risks, patch previews, verifier gates, and review packets.
+- Keeps AI suggestions reviewable and bounded by structured validation.
+- Never executes workflows, reads credentials, writes back to n8n, or exports n8n-importable patched workflows.
 
 ## Screenshot
 
-![OpenWorkflowDoctor workbench](docs/assets/openworkflowdoctor-workbench-v0.4.3.png)
+![OpenWorkflowDoctor workbench](docs/assets/openworkflowdoctor-workbench-v0.4.4.png)
 
 ## Demo
 
@@ -50,6 +47,8 @@ Recommended demo flow:
 7. Export the Review Packet for human approval.
 
 The exported packet is an OpenWorkflowDoctor review artifact. It is not an n8n-importable workflow and it does not execute any side effects.
+
+For a tighter walkthrough, see [Demo Guide](docs/demo-guide.md).
 
 ## Features
 
@@ -104,11 +103,12 @@ Out of scope for the current MVP:
 | v0.3.2 | Frozen | Public GitHub readiness cleanup |
 | v0.4.0 | Frozen | Constrained AI Patch Proposal. AI can only output validated structured `PatchOperation` data. |
 | v0.4.2 | Frozen | Real-model happy path and provider compatibility smoke results |
-| v0.4.3 | Current stable | Provider Presets and Compatibility Registry |
+| v0.4.3 | Frozen | Provider Presets and Compatibility Registry |
+| v0.4.4 | Current stable | Public demo polish, README demo media, issue templates, and feedback roadmap |
 | v0.5.0 | Planned | Read-only n8n Import. Import only, no execution and no write-back. |
 | v0.6.0 | Planned | Execution Logs and Observability Analysis for failure paths, slow nodes, and error hotspots. |
 
-The current product definition through v0.4.3:
+The current product definition through v0.4.4:
 
 OpenWorkflowDoctor is a local-first Workflow Review IDE. It supports importing multiple n8n workflows, running static diagnostics, previewing WorkflowIR patches, reviewing verifier output, recording human review, exporting Review Packets, generating advisory AI explanations, and requesting constrained AI PatchOperation proposals through configurable BYOK providers. AI never participates in final acceptance.
 
@@ -180,6 +180,8 @@ npm audit
 - [SECURITY.md](SECURITY.md)
 - [ROADMAP.md](ROADMAP.md)
 - [GitHub release notes](docs/github-release-notes.md)
+- [Demo Guide](docs/demo-guide.md)
+- [Feedback Guide](docs/feedback-guide.md)
 - [Provider presets and compatibility](docs/provider-presets-compatibility.md)
 - [Manual AI Patch Proposal smoke test](docs/manual-ai-patch-smoke-test.md)
 - [Real-model smoke results v0.4.2](docs/real-model-smoke-results-v0.4.2.md)

@@ -1,11 +1,11 @@
 import { expect, test } from "@playwright/test";
 import path from "node:path";
 
-test("workbench supports the deterministic v0.4.3 review packet demo flow", async ({ page }) => {
+test("workbench supports the deterministic v0.4.4 review packet demo flow", async ({ page }) => {
   test.setTimeout(60000);
   await page.goto("/");
 
-  await expect(page.getByText("OpenWorkflowDoctor v0.4.3").first()).toBeVisible();
+  await expect(page.getByText("OpenWorkflowDoctor v0.4.4").first()).toBeVisible();
   await expect(page.getByRole("heading", { name: "本地静态审查导出的 n8n JSON" })).toBeVisible();
   const welcomeChecklist = page.getByRole("region", { name: "本次审查会产出" });
   await expect(welcomeChecklist).toBeVisible();

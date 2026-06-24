@@ -1,4 +1,4 @@
-# OpenWorkflowDoctor v0.4.3 Demo Script
+# OpenWorkflowDoctor v0.4.4 Demo Script
 
 Target length: 3 minutes.
 
@@ -43,4 +43,4 @@ Open `http://localhost:3001`.
 
 ## Close
 
-The v0.4.3 thesis: AI can help explain and propose constrained structured changes, but deterministic validation, Verifier, and Human Review remain required. Completion is not delivery.
+The v0.4.4 thesis: AI can help explain and propose constrained structured changes, but deterministic validation, Verifier, and Human Review remain required. Completion is not delivery.

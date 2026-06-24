@@ -1,6 +1,35 @@
 # GitHub Release Notes
 
-Use these notes when creating GitHub Releases for the existing tags. `v0.4.3` is the most important public release.
+Use these notes when creating GitHub Releases for the existing tags. `v0.4.4` is the current public demo polish release.
+
+## v0.4.4
+
+Title:
+
+```text
+OpenWorkflowDoctor v0.4.4
+```
+
+Body:
+
+```text
+Public Demo Polish.
+
+Highlights:
+- Tightened the README first screen around the core product boundary.
+- Added a short demo GIF.
+- Added a Demo Guide and Feedback Guide.
+- Added GitHub issue templates for feedback and bug reports.
+- Added repository topics for GitHub discovery.
+- Added a pinned roadmap issue for v0.5 read-only n8n import.
+
+Trust boundaries:
+- No workflow runtime was added.
+- No production n8n connection was added.
+- No credential lookup or storage was added.
+- No automatic write-back was added.
+- AI still cannot mutate raw n8n JSON, apply patches, change Verifier status, change Human Review, or bypass deterministic validation.
+```
 
 ## v0.4.3
 
