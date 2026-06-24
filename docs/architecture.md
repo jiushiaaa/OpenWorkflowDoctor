@@ -54,8 +54,9 @@ WorkflowIR is secret-safe by design: imported parameter values are summarized, a
 apps/
   web/
     app/
-    components/
-    lib/
+      components/
+      hooks/
+      lib/
 packages/
   workflow-ir/
     src/
@@ -105,6 +106,8 @@ The UI-facing deterministic entry point is `createDoctorReport(rawWorkflow, requ
 `apps/web` uses these entry points directly for the first workbench: JSON import, graph canvas, node inspector, summary, risk list, patch proposal, reviewed patched preview, verification report, acceptance checklist, human review decision, and local JSON exports.
 
 In v0.3, `apps/web` wraps that same deterministic flow in a local workspace layer. Importing JSON or loading a sample creates a Workflow Document from parsed `WorkflowIR`. Running Doctor persists the latest `DoctorReport` on that document. Exporting a review packet saves a Review Packet Artifact for that document and downloads the canonical packet JSON.
+
+The workbench shell keeps those responsibilities split: `app/page.tsx` composes the IDE, `app/hooks` owns local workspace, deterministic review, and advisory AI explainer orchestration, and `app/components` renders review steps, graph, inspector, console tabs, verifier state, settings, command palette, and status bar through explicit props.
 
 LLMs must never mutate raw n8n JSON. Builder output must be structured and reviewable. Verifier output is separate from patch generation. Verifier gates separate unresolved repairable risks from inherent high-risk side effects that require human acceptance.
 Human review decisions are stored separately from verifier status so the artifact can show both what the system proved and what a reviewer chose. A human `accept` decision is considered internally consistent only when every non-pass acceptance checklist item is explicitly confirmed; otherwise `humanReviewValidation` remains `hold`.
