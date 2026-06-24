@@ -16,4 +16,9 @@ describe("workbench i18n", () => {
   test("returns en-US copy when requested", () => {
     expect(createTranslator("en-US")("toolbar.settings")).toBe("Settings");
   });
+
+  test("keeps public app version label aligned with current stable release", () => {
+    expect(createTranslator("zh-CN")("app.version")).toBe("OpenWorkflowDoctor v0.4.3");
+    expect(createTranslator("en-US")("app.version")).toBe("OpenWorkflowDoctor v0.4.3");
+  });
 });

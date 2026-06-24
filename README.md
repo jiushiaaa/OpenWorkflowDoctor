@@ -4,6 +4,8 @@ Local-first Workflow Review IDE for exported n8n workflows.
 
 OpenWorkflowDoctor reviews workflows. It does not run them.
 
+Current stable release: `v0.4.3` Provider Presets & Compatibility Registry.
+
 It is not:
 
 - a workflow builder
@@ -22,6 +24,10 @@ It is:
 
 The product is designed around one trust boundary: AI may explain and, in future versions, propose validated structured changes, but it must never directly mutate raw n8n JSON or decide final acceptance.
 
+## Screenshot
+
+![OpenWorkflowDoctor workbench](docs/assets/openworkflowdoctor-workbench-v0.4.3.png)
+
 ## Demo
 
 Run the local web workbench:
@@ -37,9 +43,11 @@ Recommended demo flow:
 
 1. Load the bundled refund workflow sample or import `samples/n8n/refund-workflow.json`.
 2. Run Doctor with the default reliability review request.
-3. Inspect the workflow graph, static risks, patch preview, verifier gates, and human review checklist.
-4. Apply the reviewed patch preview locally.
-5. Export the Review Packet for human approval.
+3. Inspect the workflow graph, static risks, deterministic patch preview, verifier gates, and human review checklist.
+4. Open Settings and review provider presets, including Verified, Preset, Experimental, and Custom tiers.
+5. Inspect the AI Patch Proposal boundary: AI can propose structured operations only, and unavailable providers fall back safely.
+6. Apply the reviewed patch preview locally.
+7. Export the Review Packet for human approval.
 
 The exported packet is an OpenWorkflowDoctor review artifact. It is not an n8n-importable workflow and it does not execute any side effects.
 
@@ -70,8 +78,8 @@ OpenWorkflowDoctor is local-first and review-first.
 - API keys are masked in the UI and are not included in `WorkflowIR`, `DoctorReviewPacket`, or exported artifacts.
 - Sensitive parameter previews such as API keys, authorization headers, passwords, tokens, and secrets are redacted before they enter WorkflowIR, UI, or review exports.
 - Static diagnostics and deterministic patch generation work without an LLM.
-- AI Explainer is advisory-only in v0.2 and v0.3.x.
-- AI Patch Proposal in v0.4 can propose validated structured changes, but it cannot apply patches, mutate raw n8n JSON, change verifier status, or change human review.
+- AI Explainer remains advisory-only.
+- AI Patch Proposal can propose validated structured changes, but it cannot apply patches, mutate raw n8n JSON, change verifier status, or change human review.
 - Patch generation and verification are separate steps.
 - A Builder Agent may propose changes in future versions, but only a Verifier can mark them `pass`, `hold`, or `fail`.
 - Human review is recorded separately from verifier output.
@@ -93,13 +101,16 @@ Out of scope for the current MVP:
 | v0.2.0 | Frozen | Advisory AI Explainer, Settings, i18n, and BYOK AI Provider |
 | v0.3.0 | Frozen | Local Workspace and Multiple Workflows |
 | v0.3.1 | Frozen | Workbench Refactor |
-| v0.4.0 | Implemented | AI Patch Proposal. AI can only output validated structured `PatchOperation` data. |
+| v0.3.2 | Frozen | Public GitHub readiness cleanup |
+| v0.4.0 | Frozen | Constrained AI Patch Proposal. AI can only output validated structured `PatchOperation` data. |
+| v0.4.2 | Frozen | Real-model happy path and provider compatibility smoke results |
+| v0.4.3 | Current stable | Provider Presets and Compatibility Registry |
 | v0.5.0 | Planned | Read-only n8n Import. Import only, no execution and no write-back. |
 | v0.6.0 | Planned | Execution Logs and Observability Analysis for failure paths, slow nodes, and error hotspots. |
 
-The current product definition through v0.3.1:
+The current product definition through v0.4.3:
 
-OpenWorkflowDoctor is a local-first Workflow Review IDE. It supports importing multiple n8n workflows, running static diagnostics, previewing WorkflowIR patches, reviewing verifier output, recording human review, and exporting Review Packets. AI only explains; it does not participate in final acceptance.
+OpenWorkflowDoctor is a local-first Workflow Review IDE. It supports importing multiple n8n workflows, running static diagnostics, previewing WorkflowIR patches, reviewing verifier output, recording human review, exporting Review Packets, generating advisory AI explanations, and requesting constrained AI PatchOperation proposals through configurable BYOK providers. AI never participates in final acceptance.
 
 ## Architecture
 
@@ -129,7 +140,7 @@ Core rules:
 ## Packages
 
 - `packages/workflow-ir`: deterministic WorkflowIR, diagnostics, patch proposal, verification, and review packet logic.
-- `packages/workflow-ai`: advisory AI explanation contracts and provider helpers.
+- `packages/workflow-ai`: advisory AI explanation, constrained AI patch proposal, provider registry, and provider helper contracts.
 - `apps/web`: local browser workbench.
 - `samples/n8n`: demo exported workflow JSON.
 
@@ -163,4 +174,13 @@ Run dependency audit:
 npm audit
 ```
 
-See `docs/public-github-audit-v0.3.1.md` for the current public-readiness audit notes.
+## Public Release Docs
+
+- [CHANGELOG.md](CHANGELOG.md)
+- [SECURITY.md](SECURITY.md)
+- [ROADMAP.md](ROADMAP.md)
+- [GitHub release notes](docs/github-release-notes.md)
+- [Provider presets and compatibility](docs/provider-presets-compatibility.md)
+- [Manual AI Patch Proposal smoke test](docs/manual-ai-patch-smoke-test.md)
+- [Real-model smoke results v0.4.2](docs/real-model-smoke-results-v0.4.2.md)
+- [Public GitHub audit notes v0.3.1](docs/public-github-audit-v0.3.1.md)

@@ -1,6 +1,6 @@
-# OpenWorkflowDoctor v0.2 Release Checklist
+# OpenWorkflowDoctor v0.4.3 Public Release Checklist
 
-Run these commands from the repository root before any v0.2 release commit:
+Run these commands from the repository root before any public release commit:
 
 ```bash
 npm test
@@ -12,27 +12,38 @@ npm run test:e2e
 
 Expected result: every command exits with code 0.
 
-## v0.2 freeze checks
+## Public docs checks
 
-- Default language is `zh-CN`.
-- `en-US` language switch works.
-- Settings controls language, theme, and AI Provider.
-- Theme control lives in Settings, not as a loose top-level temporary button.
-- AI Provider config supports provider, base URL, API key, and model.
+- README names `v0.4.3` as the current stable release.
+- README includes a current workbench screenshot.
+- CHANGELOG lists all public tags and keeps AI trust boundaries explicit.
+- SECURITY documents local BYOK, WorkflowIR redaction, Review Packet exclusions, and AI provider boundaries.
+- ROADMAP keeps v0.5 read-only n8n import in design-first status.
+- GitHub release notes are available in `docs/github-release-notes.md`.
+- Provider compatibility is documented in `docs/provider-presets-compatibility.md`.
+- Manual smoke instructions are documented in `docs/manual-ai-patch-smoke-test.md`.
+
+## v0.4.3 freeze checks
+
+- Provider registry includes Verified, Preset, Experimental, and Custom tiers.
+- Settings provider dropdown uses provider presets.
+- Provider config supports provider, base URL, API key, model, transport, and response format.
 - API key is masked in UI.
 - API key is stored only in browser-local Settings for local-first use.
 - API key is not included in `WorkflowIR`.
 - API key is not included in `DoctorReviewPacket`.
-- API key is not logged.
-- AI Explainer works without API key using deterministic fallback.
+- API key is not included in workspace documents.
 - AI Explainer remains advisory-only.
-- AI Explainer cannot create `PatchOperation`.
-- AI Explainer cannot change verifier status.
-- AI Explainer cannot change `humanReviewValidation`.
+- AI Patch Proposal can only propose structured `PatchOperation` candidates.
+- AI Patch Proposal output must pass Zod validation.
+- AI Patch Proposal output must pass semantic validation and conflict detection.
+- AI Patch Proposal preview must use the deterministic patch engine.
+- AI cannot change verifier status.
+- AI cannot change `humanReviewValidation`.
 - Deterministic diagnostics and Verifier remain the source of truth.
+- Human Review remains required before acceptance.
 - Primary UI copy is translated in `zh-CN` and `en-US`.
-- README documents v0.2 capabilities and limitations.
-- Playwright e2e covers Settings, language switch, and AI fallback.
-- Do not add AI patch generation, AI verifier behavior, n8n API integration, workflow execution, or n8n-importable patch export.
+- Playwright e2e covers Settings, language switch, AI fallback, provider presets, AI patch preview, and multi-workflow state.
+- Do not add production n8n API integration, workflow execution, automatic write-back, credential lookup, or n8n-importable patch export.
 
 Do not tag a release until the release owner manually reviews the resulting repository state.
