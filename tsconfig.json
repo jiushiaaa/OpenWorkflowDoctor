@@ -3,6 +3,9 @@
   "references": [
     {
       "path": "./packages/workflow-ir"
+    },
+    {
+      "path": "./packages/workflow-ai"
     }
   ]
 }

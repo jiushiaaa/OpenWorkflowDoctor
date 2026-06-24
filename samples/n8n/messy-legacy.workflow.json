@@ -1,12 +1,42 @@
 {
+  "id": "demo-messy-legacy",
   "name": "Messy Legacy Workflow",
   "nodes": [
     {
+      "id": "legacy-webhook",
       "name": "Legacy Webhook",
       "type": "n8n-nodes-base.webhook",
       "parameters": {
-        "path": "legacy-sync",
+        "path": "legacy/customer-sync",
         "httpMethod": "POST"
+      }
+    },
+    {
+      "id": "legacy-switch",
+      "name": "Switch Legacy Route",
+      "type": "n8n-nodes-base.switch",
+      "parameters": {
+        "numberOfOutputs": 3,
+        "rules": [
+          {
+            "value1": "={{$json.priority}}",
+            "operation": "equal",
+            "value2": "high"
+          },
+          {
+            "value1": "={{$json.priority}}",
+            "operation": "equal",
+            "value2": "normal"
+          }
+        ]
+      }
+    },
+    {
+      "id": "custom-transform",
+      "name": "Normalize Customer",
+      "type": "acme-nodes-base.customerNormalizer",
+      "parameters": {
+        "mode": "legacy-demo"
       }
     },
     {
@@ -15,37 +45,94 @@
       "type": "n8n-nodes-base.postgres",
       "parameters": {
         "operation": "update",
-        "table": "customers"
+        "table": "customers",
+        "matchingColumn": "demo_customer_id"
       }
     },
     {
-      "id": "notify",
-      "name": "Send Email Notification",
+      "id": "notify-ops",
+      "name": "Notify Ops",
+      "type": "n8n-nodes-base.slack",
+      "parameters": {
+        "resource": "message",
+        "operation": "post",
+        "channel": "#demo-legacy",
+        "text": "High priority legacy sync completed."
+      }
+    },
+    {
+      "id": "notify-ops-copy",
+      "name": "Notify Ops Copy",
       "type": "n8n-nodes-base.emailSend",
       "parameters": {
-        "to": "ops@example.test",
+        "toEmail": "ops@example.test",
         "subject": "Legacy sync completed"
       }
     },
     {
-      "id": "failure-log",
-      "name": "CRM Update Failure Log",
-      "type": "custom.log",
+      "id": "audit-append",
+      "name": "Append Audit Row",
+      "type": "n8n-nodes-base.googleSheets",
       "parameters": {
-        "event": "crm_update_failed"
+        "operation": "append",
+        "sheetName": "demo_legacy_audit"
       }
     },
     {
-      "id": "orphan",
-      "name": "Disconnected Old Helper",
-      "type": "vendor.legacyHelper",
+      "id": "old-csv-trigger",
+      "name": "Old CSV Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "parameters": {}
+    },
+    {
+      "id": "old-csv-mapper",
+      "name": "Normalize Customer Copy",
+      "type": "n8n-nodes-base.function",
       "parameters": {
-        "note": "Kept here to show disconnected subgraph diagnostics"
+        "functionCode": "return items;"
+      }
+    },
+    {
+      "id": "dead-helper",
+      "name": "Dead Legacy Helper",
+      "type": "legacy.internalHelper",
+      "parameters": {
+        "note": "Intentionally isolated demo node."
       }
     }
   ],
   "connections": {
     "Legacy Webhook": {
+      "main": [
+        [
+          {
+            "node": "Switch Legacy Route",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch Legacy Route": {
+      "main": [
+        [
+          {
+            "node": "Normalize Customer",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "CRM Update",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Normalize Customer": {
       "main": [
         [
           {
@@ -60,15 +147,50 @@
       "main": [
         [
           {
-            "node": "Send Email Notification",
+            "node": "Notify Ops",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Notify Ops Copy",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Broken Source": {
-      "main": "malformed"
+    "Notify Ops": {
+      "main": [
+        [
+          {
+            "node": "Append Audit Row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Notify Ops Copy": {
+      "main": [
+        [
+          {
+            "node": "Append Audit Row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Old CSV Trigger": {
+      "main": [
+        [
+          {
+            "node": "Normalize Customer Copy",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   }
 }

@@ -1,5 +1,5 @@
 {
-  "name": "@openworkflowdoctor/workflow-ir",
+  "name": "@openworkflowdoctor/workflow-ai",
   "version": "0.2.0",
   "private": true,
   "type": "module",
@@ -13,5 +13,9 @@
   },
   "scripts": {
     "typecheck": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@openworkflowdoctor/workflow-ir": "0.2.0",
+    "zod": "^4.4.3"
   }
 }

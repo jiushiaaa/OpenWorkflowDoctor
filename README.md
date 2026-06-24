@@ -4,6 +4,19 @@ OpenWorkflowDoctor is a Workflow Reliability IDE for existing n8n workflows. It 
 
 The MVP is deliberately not a workflow builder and not a workflow runtime. It does not connect to production n8n, execute workflows, read credentials, or trigger external side effects.
 
+## v0.2 Release Boundary
+
+OpenWorkflowDoctor v0.2 freezes the local Workflow Doctor with i18n, Settings, and an advisory AI Explainer. The deterministic v0.1 trust model remains the source of truth.
+
+- Default language is `zh-CN`, with an `en-US` language switch in Settings.
+- Settings controls language, theme, and local AI Provider configuration.
+- Local AI Provider configuration supports provider type, base URL, API key, and model.
+- API keys are masked in the UI and stored only in this browser's local settings for local-first use.
+- API keys are not part of `WorkflowIR`, `DoctorReviewPacket`, or exported review artifacts.
+- AI Explainer uses secret-safe WorkflowIR summaries, graph summaries, risk summaries, and verifier gates.
+- AI Explainer falls back to deterministic advisory text when no API key is configured or the provider is unavailable.
+- AI Explainer is advisory-only: it cannot create `PatchOperation` objects, change verifier status, change `humanReviewValidation`, execute workflows, connect to n8n, or export n8n-importable patches.
+
 ## v0.1 Demo Boundary
 
 OpenWorkflowDoctor v0.1 is safe to demo as a local static Workflow Doctor and Review Packet generator for exported n8n JSON.
@@ -72,7 +85,7 @@ Implemented:
 
 Not implemented yet:
 
-- LLM analyzer, patch agent, or verifier agent.
+- AI patch agent or AI verifier agent.
 - n8n API integration.
 - Runtime execution or credential handling.
 
@@ -116,13 +129,20 @@ npm run lint
 - Raw n8n-importable patch generation.
 - Production deployment controls, auth, persistence, or collaboration.
 
-## v0.2 Roadmap
+## v0.2 Capabilities
+
+- Advisory AI Explainer with deterministic fallback.
+- Settings modal for language, theme, and local AI Provider configuration.
+- `zh-CN` and `en-US` primary UI copy.
+- Local-first API key handling for the browser workbench.
+
+## Future Roadmap
 
 - Broader n8n fixture coverage and node catalog awareness.
-- Optional LLM agents that emit the same validated structured contracts.
+- Optional AI patch agents only after they emit the same validated structured contracts and remain reviewable before apply.
 - Richer path analysis and risk explanations.
 - Review packet signing or stronger tamper-evidence.
-- n8n export-generation experiments after the WorkflowIR contract is stable.
+- n8n export-generation experiments only after the WorkflowIR contract is stable.
 
 ## Development Direction
 

@@ -1,33 +1,42 @@
 {
+  "id": "demo-refund-risky",
   "name": "Refund Risky Workflow",
   "nodes": [
     {
-      "id": "webhook",
-      "name": "Webhook Trigger",
+      "id": "refund-webhook",
+      "name": "Refund Request Webhook",
       "type": "n8n-nodes-base.webhook",
       "parameters": {
-        "path": "refund",
-        "httpMethod": "POST"
+        "path": "demo/refunds",
+        "httpMethod": "POST",
+        "responseMode": "onReceived"
       }
     },
     {
-      "id": "lookup",
+      "id": "lookup-order",
       "name": "Lookup Order",
       "type": "n8n-nodes-base.httpRequest",
       "parameters": {
-        "url": "https://api.example.test/orders/{{$json.orderId}}",
-        "method": "GET"
+        "url": "https://orders.example.test/api/orders/{{$json.orderId}}",
+        "method": "GET",
+        "sendHeaders": true,
+        "headerParameters": [
+          {
+            "name": "X-Demo-Api-Key",
+            "value": "demo-placeholder-api-key"
+          }
+        ]
       }
     },
     {
-      "id": "branch",
-      "name": "IF refund amount > 500",
+      "id": "refund-amount-branch",
+      "name": "IF Refund Amount Over 500",
       "type": "n8n-nodes-base.if",
       "parameters": {
         "conditions": {
           "number": [
             {
-              "value1": "={{$json.amount}}",
+              "value1": "={{$json.refundAmount}}",
               "operation": "larger",
               "value2": 500
             }
@@ -36,23 +45,59 @@
       }
     },
     {
-      "id": "approval",
-      "name": "Manual Approval",
-      "type": "n8n-nodes-base.manualTrigger",
-      "parameters": {}
+      "id": "large-refund-stop-marker",
+      "name": "Large Refund Should Stop",
+      "type": "n8n-nodes-base.noOp",
+      "parameters": {
+        "note": "Demo risk: this branch should stop for manual review, but the workflow continues to the refund node."
+      }
     },
     {
-      "id": "refund",
-      "name": "Stripe Refund",
+      "id": "create-refund",
+      "name": "Stripe Create Refund",
       "type": "n8n-nodes-base.stripe",
       "parameters": {
         "resource": "charge",
-        "operation": "refund"
+        "operation": "refund",
+        "chargeId": "={{$json.chargeId}}",
+        "amount": "={{$json.refundAmount}}"
+      }
+    },
+    {
+      "id": "update-crm",
+      "name": "CRM Update Contact",
+      "type": "n8n-nodes-base.hubspot",
+      "parameters": {
+        "resource": "contact",
+        "operation": "update",
+        "contactId": "={{$json.customerId}}",
+        "property": "last_refund_amount"
+      }
+    },
+    {
+      "id": "send-customer-email",
+      "name": "Send Customer Refund Email",
+      "type": "n8n-nodes-base.emailSend",
+      "parameters": {
+        "fromEmail": "support@example.test",
+        "toEmail": "={{$json.customerEmail}}",
+        "subject": "Your demo refund has been requested"
+      }
+    },
+    {
+      "id": "slack-finance-alert",
+      "name": "Slack Finance Notification",
+      "type": "n8n-nodes-base.slack",
+      "parameters": {
+        "resource": "message",
+        "operation": "post",
+        "channel": "#demo-refunds",
+        "text": "Refund requested for order {{$json.orderId}}"
       }
     }
   ],
   "connections": {
-    "Webhook Trigger": {
+    "Refund Request Webhook": {
       "main": [
         [
           {
@@ -67,25 +112,63 @@
       "main": [
         [
           {
-            "node": "IF refund amount > 500",
+            "node": "IF Refund Amount Over 500",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "IF refund amount > 500": {
+    "IF Refund Amount Over 500": {
       "main": [
         [
           {
-            "node": "Manual Approval",
+            "node": "Large Refund Should Stop",
             "type": "main",
             "index": 0
           }
         ],
         [
           {
-            "node": "Stripe Refund",
+            "node": "Stripe Create Refund",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Large Refund Should Stop": {
+      "main": [
+        [
+          {
+            "node": "Stripe Create Refund",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Stripe Create Refund": {
+      "main": [
+        [
+          {
+            "node": "CRM Update Contact",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Slack Finance Notification",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CRM Update Contact": {
+      "main": [
+        [
+          {
+            "node": "Send Customer Refund Email",
             "type": "main",
             "index": 0
           }

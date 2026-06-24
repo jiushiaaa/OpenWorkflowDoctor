@@ -180,6 +180,24 @@ describe("createDoctorReviewPacket", () => {
     expect(serialized).toContain("safe=1");
   });
 
+  test("does not include local AI provider API keys in exported packets", () => {
+    const baseReport = createDoctorReport(branchWorkflow, "帮我修复支付风险");
+    const reportWithLocalSettings = {
+      ...baseReport,
+      localAiProviderConfig: {
+        providerType: "openai-compatible",
+        baseUrl: "https://api.openai.com/v1",
+        apiKey: "sk-local-browser-only",
+        model: "gpt-4.1-mini"
+      }
+    };
+    const packet = createDoctorReviewPacket(reportWithLocalSettings, "2026-06-23T00:00:00.000Z");
+    const serialized = JSON.stringify(packet);
+
+    expect(serialized).not.toContain("sk-local-browser-only");
+    expect(serialized).not.toContain("localAiProviderConfig");
+  });
+
   test("adds a human-readable acceptance checklist from verifier gates", () => {
     const report = createDoctorReport(branchWorkflow, "请全面修复所有支持的可靠性问题");
     const packet = createDoctorReviewPacket(report, "2026-06-23T00:00:00.000Z");

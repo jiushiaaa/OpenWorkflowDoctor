@@ -1,99 +1,97 @@
 {
+  "id": "demo-content-automation",
   "name": "Content Automation Workflow",
   "nodes": [
     {
-      "id": "webhook",
-      "name": "Content Webhook",
-      "type": "n8n-nodes-base.webhook",
+      "id": "rss-input",
+      "name": "Read Product Blog RSS",
+      "type": "n8n-nodes-base.rssFeedRead",
       "parameters": {
-        "path": "content-publish",
-        "httpMethod": "POST",
-        "dedupeKey": "={{$json.requestId}}"
+        "url": "https://content.example.test/rss.xml"
       }
     },
     {
-      "id": "fetch-brief",
-      "name": "Fetch Brief",
+      "id": "fetch-source",
+      "name": "Fetch Source Article",
       "type": "n8n-nodes-base.httpRequest",
       "parameters": {
-        "url": "https://cms.example.test/briefs/{{$json.briefId}}",
-        "method": "GET",
-        "timeout": 30000
+        "url": "={{$json.link}}",
+        "method": "GET"
       }
     },
     {
-      "id": "route",
-      "name": "Switch Channel",
-      "type": "n8n-nodes-base.switch",
+      "id": "summarize",
+      "name": "LLM Summarize Article",
+      "type": "n8n-nodes-base.openAi",
       "parameters": {
-        "numberOfOutputs": 3
+        "resource": "text",
+        "operation": "message",
+        "model": "demo-summary-model",
+        "prompt": "Summarize this article for an internal editorial queue."
       }
     },
     {
-      "id": "email",
-      "name": "Send Editorial Email",
-      "type": "n8n-nodes-base.emailSend",
+      "id": "create-notion-draft",
+      "name": "Create Notion Draft",
+      "type": "n8n-nodes-base.notion",
       "parameters": {
-        "to": "editor@example.test",
-        "subject": "New content brief",
-        "sendLog": "={{$json.messageId}}"
+        "resource": "databasePage",
+        "operation": "create",
+        "databaseId": "demo-notion-database-id",
+        "title": "={{$json.title}}"
       }
     },
     {
-      "id": "audit",
-      "name": "Content Success Audit Log",
-      "type": "custom.audit",
+      "id": "notify-editorial",
+      "name": "Slack Editorial Notification",
+      "type": "n8n-nodes-base.slack",
       "parameters": {
-        "event": "content_publish_requested"
+        "resource": "message",
+        "operation": "post",
+        "channel": "#demo-editorial",
+        "text": "New summary draft is ready for review."
       }
     }
   ],
   "connections": {
-    "Content Webhook": {
+    "Read Product Blog RSS": {
       "main": [
         [
           {
-            "node": "Fetch Brief",
+            "node": "Fetch Source Article",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Fetch Brief": {
+    "Fetch Source Article": {
       "main": [
         [
           {
-            "node": "Switch Channel",
+            "node": "LLM Summarize Article",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Switch Channel": {
+    "LLM Summarize Article": {
       "main": [
         [
           {
-            "node": "Send Editorial Email",
+            "node": "Create Notion Draft",
             "type": "main",
             "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Content Success Audit Log",
-            "type": "main",
-            "index": 1
           }
         ]
       ]
     },
-    "Send Editorial Email": {
+    "Create Notion Draft": {
       "main": [
         [
           {
-            "node": "Content Success Audit Log",
+            "node": "Slack Editorial Notification",
             "type": "main",
             "index": 0
           }
