@@ -1,4 +1,9 @@
-import { createDoctorReportFromWorkflow, createDoctorReviewPacket, parseN8nWorkflow } from "@openworkflowdoctor/workflow-ir";
+import {
+  createDoctorReportFromWorkflow,
+  createDoctorReviewPacket,
+  importDifyDslWorkflow,
+  parseN8nWorkflow
+} from "@openworkflowdoctor/workflow-ir";
 import { describe, expect, test } from "vitest";
 import branchWorkflow from "../../../../packages/workflow-ir/tests/fixtures/refund-branch-workflow.json";
 import {
@@ -277,6 +282,124 @@ describe("local workspace repository", () => {
     expect(serialized).toContain("[redacted]");
     expect(serialized).not.toContain("sk_live_should_not_be_stored");
     expect(serialized).not.toContain("live-token-should-not-be-stored");
+  });
+
+  test("creates Dify DSL workflow documents with sanitized source metadata", () => {
+    const imported = importDifyDslWorkflow({
+      fileName: "dify-support.yml",
+      content: `
+kind: app
+version: 0.6.0
+app:
+  name: Dify Support
+  mode: workflow
+workflow:
+  environment_variables:
+    - name: API_SECRET
+      type: secret
+      value: sk-dify-workspace-secret
+  graph:
+    nodes:
+      - id: start
+        data:
+          title: Start
+          type: start
+      - id: end
+        data:
+          title: End
+          type: end
+    edges:
+      - source: start
+        target: end
+`
+    });
+    const document = createWorkflowDocumentFromWorkflowIr({
+      workflow: imported.workflow,
+      sourceKind: "dify-dsl",
+      sourceLabel: "dify-support.yml",
+      sourceMetadata: imported.metadata
+    });
+    const serialized = JSON.stringify(document);
+
+    expect(document.sourceKind).toBe("dify-dsl");
+    expect(document.sourceMetadata).toMatchObject({
+      sourceKind: "dify-dsl",
+      sourcePlatform: "dify",
+      sourceVersion: "0.6.0",
+      sourceAppMode: "workflow",
+      app: {
+        name: "Dify Support",
+        mode: "workflow"
+      }
+    });
+    expect(document.originalWorkflowIr.source?.sourceKind).toBe("dify-dsl");
+    expect(serialized).not.toContain("kind: app");
+    expect(serialized).not.toContain("sk-dify-workspace-secret");
+  });
+
+  test("keeps sentinel Dify YAML secrets out of workflow documents and packet artifacts", () => {
+    const imported = importDifyDslWorkflow({
+      fileName: "sentinel.yml",
+      content: `
+kind: app
+version: 0.6.0
+app:
+  name: Sentinel Workspace
+  mode: workflow
+workflow:
+  environment_variables:
+    - name: SENTINEL_SECRET
+      type: secret
+      value: SECRET_DIFY_ENV_VALUE_SHOULD_NOT_LEAK
+  graph:
+    nodes:
+      - id: start
+        data:
+          title: Start
+          type: start
+          variables:
+            - variable: upload
+              type: file
+              default:
+                upload_file_id: SECRET_DIFY_UPLOAD_FILE_ID_SHOULD_NOT_LEAK
+                uploadedId: SECRET_DIFY_UPLOAD_FILE_ID_SHOULD_NOT_LEAK
+      - id: tool
+        data:
+          title: Tool
+          type: tool
+          headers:
+            Authorization: Bearer SECRET_DIFY_AUTH_HEADER_SHOULD_NOT_LEAK
+          url: https://api.example.test/resource?signature=SECRET_DIFY_SIGNED_URL_SHOULD_NOT_LEAK&safe=1
+      - id: answer
+        data:
+          title: Answer
+          type: answer
+    edges:
+      - source: start
+        target: tool
+      - source: tool
+        target: answer
+`
+    });
+    const document = createWorkflowDocumentFromWorkflowIr({
+      workflow: imported.workflow,
+      sourceKind: "dify-dsl",
+      sourceLabel: "sentinel.yml",
+      sourceMetadata: imported.metadata
+    });
+    const report = createDoctorReportFromWorkflow(document.originalWorkflowIr, "检查 Dify");
+    const artifact = createReviewPacketArtifact({
+      workflowDocumentId: document.id,
+      packet: createDoctorReviewPacket(report)
+    });
+    const serialized = JSON.stringify({ document, artifact });
+
+    expect(serialized).toContain("[redacted]");
+    expect(serialized).not.toContain("kind: app");
+    expect(serialized).not.toContain("SECRET_DIFY_ENV_VALUE_SHOULD_NOT_LEAK");
+    expect(serialized).not.toContain("SECRET_DIFY_UPLOAD_FILE_ID_SHOULD_NOT_LEAK");
+    expect(serialized).not.toContain("SECRET_DIFY_AUTH_HEADER_SHOULD_NOT_LEAK");
+    expect(serialized).not.toContain("SECRET_DIFY_SIGNED_URL_SHOULD_NOT_LEAK");
   });
 
   test("rejects raw imported workflow fields in stored workflow documents", () => {

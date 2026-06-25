@@ -1,5 +1,6 @@
 export * from "./ai-patch-proposal.js";
 export * from "./doctor-report.js";
+export * from "./dify-dsl-import.js";
 export * from "./graph.js";
 export * from "./n8n-parser.js";
 export * from "./n8n-readonly-import.js";
@@ -13,3 +14,4 @@ export * from "./summary.js";
 export * from "./types.js";
 export * from "./verifier.js";
 export * from "./view-model.js";
+export * from "./workflow-source-adapter.js";

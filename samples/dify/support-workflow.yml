@@ -1,0 +1,43 @@
+kind: app
+version: 0.6.0
+app:
+  name: Dify Support Review
+  description: Sample Dify DSL workflow for OpenWorkflowDoctor import smoke tests.
+  mode: workflow
+workflow:
+  environment_variables:
+    - name: SERVICE_TOKEN
+      type: secret
+      value: sk-dify-sample-should-not-leak
+  graph:
+    nodes:
+      - id: start
+        data:
+          title: User Input
+          type: start
+      - id: branch
+        data:
+          title: Needs Escalation
+          type: if-else
+      - id: http-tool
+        data:
+          title: HTTP Tool
+          type: tool
+          provider_id: langgenius/http
+          headers:
+            Authorization: Bearer dify-sample-token
+      - id: answer
+        data:
+          title: Answer
+          type: answer
+    edges:
+      - id: start-branch
+        source: start
+        target: branch
+      - id: branch-tool
+        source: branch
+        target: http-tool
+        sourceHandle: true
+      - id: tool-answer
+        source: http-tool
+        target: answer

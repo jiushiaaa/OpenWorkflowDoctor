@@ -18,7 +18,12 @@ export const nodeIrSchema = z.object({
   name: z.string().min(1),
   type: z.string().min(1),
   typeFamily: nodeTypeFamilySchema,
-  parameters: z.array(nodeParameterSummarySchema)
+  parameters: z.array(nodeParameterSummarySchema),
+  credentialSummary: z.object({
+    credentialReferencePresent: z.boolean(),
+    credentialTypes: z.array(z.string().min(1)),
+    credentialCount: z.number().int().nonnegative()
+  }).strict().optional()
 }).strict();
 
 export const patchOperationSchema = z.discriminatedUnion("type", [
@@ -133,14 +138,56 @@ const edgeIrSchema = z.object({
   sourceNodeId: z.string().min(1),
   targetNodeId: z.string().min(1),
   sourceOutput: z.string().min(1),
-  sourceOutputIndex: z.number().int().nonnegative()
+  sourceOutputIndex: z.number().int().nonnegative(),
+  targetInput: z.string().min(1).optional()
+}).strict();
+
+const workflowSourceDiagnosticSchema = z.object({
+  code: z.string().min(1),
+  message: z.string().min(1),
+  severity: riskSeveritySchema,
+  nodeId: z.string().min(1).optional(),
+  evidence: z.array(z.string())
+}).strict();
+
+const workflowSourceMetadataSchema = z.object({
+  sourceKind: z.enum(["n8n-json", "n8n-readonly", "dify-dsl"]),
+  sourcePlatform: z.string().min(1),
+  sourceVersion: z.string().min(1).optional(),
+  sourceAppMode: z.string().min(1).optional(),
+  sourceLabel: z.string().min(1).optional(),
+  app: z.object({
+    name: z.string().min(1),
+    description: z.string().optional(),
+    mode: z.string().min(1).optional(),
+    icon: z.string().optional(),
+    iconBackground: z.string().optional(),
+    useIconAsAnswerIcon: z.boolean().optional()
+  }).strict().optional(),
+  nodeCount: z.number().int().nonnegative(),
+  edgeCount: z.number().int().nonnegative(),
+  redactionSummary: z.object({
+    redactedValueCount: z.number().int().nonnegative(),
+    redactedKeys: z.array(z.string()),
+    notes: z.array(z.string())
+  }).strict(),
+  parserWarnings: z.array(z.string()),
+  diagnostics: z.array(workflowSourceDiagnosticSchema),
+  environmentVariables: z.array(z.object({
+    name: z.string().min(1),
+    declaredType: z.string().min(1).optional(),
+    valueExisted: z.boolean(),
+    redacted: z.boolean(),
+    redactionReason: z.string().min(1).optional()
+  }).strict()).optional()
 }).strict();
 
 const workflowIrSchema = z.object({
   id: z.string().min(1).optional(),
   name: z.string().min(1),
   nodes: z.array(nodeIrSchema),
-  edges: z.array(edgeIrSchema)
+  edges: z.array(edgeIrSchema),
+  source: workflowSourceMetadataSchema.optional()
 }).strict();
 
 const riskIssueSchema = z.object({
@@ -212,6 +259,7 @@ export const doctorReviewPacketSchema = z.object({
   schemaVersion: z.literal("openworkflowdoctor.review-packet.v1"),
   generatedAt: z.string().min(1),
   workflowName: z.string().min(1),
+  source: workflowSourceMetadataSchema.optional(),
   reviewTargetFingerprint: z.string().min(1),
   acceptanceRecommendation: verificationStatusSchema,
   riskDelta: z.object({

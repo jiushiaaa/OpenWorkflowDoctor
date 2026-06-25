@@ -24,11 +24,11 @@ test("first-run onboarding completes demo mode without n8n or AI", async ({ page
   await expect(page.getByRole("dialog", { name: "First-run onboarding" })).toHaveCount(0);
 });
 
-test("workbench supports the deterministic v0.5.2 review packet demo flow", async ({ page }) => {
+test("workbench supports the deterministic v0.6.0 review packet demo flow", async ({ page }) => {
   test.setTimeout(60000);
   await page.goto("/");
 
-  await expect(page.getByText("OpenWorkflowDoctor v0.5.2").first()).toBeVisible();
+  await expect(page.getByText("OpenWorkflowDoctor v0.6.0").first()).toBeVisible();
   await expect(page.getByRole("heading", { name: "本地静态审查导出的 n8n JSON" })).toBeVisible();
   const welcomeChecklist = page.getByRole("region", { name: "本次审查会产出" });
   await expect(welcomeChecklist).toBeVisible();
@@ -275,6 +275,26 @@ test("workbench imports two workflows and restores state when switching", async 
     page.getByRole("region", { name: "工作流审查 IDE" }).getByRole("heading", { name: "Messy Legacy Workflow" })
   ).toBeVisible();
   await expect(reviewConsole.getByText("Webhook has no dedupe guard", { exact: true })).toHaveCount(0);
+});
+
+test("workbench imports a Dify DSL YAML and runs Doctor", async ({ page }) => {
+  await page.goto("/");
+
+  await page.locator('input[type="file"]').setInputFiles(path.join(process.cwd(), "samples/dify/support-workflow.yml"));
+
+  const reviewSteps = page.getByRole("complementary", { name: "审查步骤" });
+  await expect(reviewSteps.getByRole("heading", { name: "Dify Support Review" })).toBeVisible();
+  await expect(reviewSteps.getByLabel("审查目标").getByText("Dify DSL 来源")).toBeVisible();
+  await expect(reviewSteps.getByText("仅用于诊断。OpenWorkflowDoctor 不会运行、发布或写回 Dify。")).toBeVisible();
+  await expect(page.getByText("sk-dify-sample-should-not-leak")).toHaveCount(0);
+  await expect(page.getByText("dify-sample-token")).toHaveCount(0);
+
+  await reviewSteps.locator(".primary-action").click();
+
+  const reviewConsole = page.getByRole("region", { name: "Review Console" });
+  await expect(reviewConsole.getByText("Dify secret environment variable is materialized")).toBeVisible();
+  await expect(reviewConsole.getByText("Dify node may perform external side effects")).toBeVisible();
+  await expect(reviewConsole.getByText("Dify condition has no fallback route")).toBeVisible();
 });
 
 test("workbench imports a workflow from read-only n8n and runs Doctor", async ({ page }) => {

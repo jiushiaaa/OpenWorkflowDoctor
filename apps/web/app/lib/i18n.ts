@@ -4,7 +4,7 @@ export const DEFAULT_LANGUAGE: Language = "zh-CN";
 
 export const dictionaries = {
   "zh-CN": {
-    "app.version": "OpenWorkflowDoctor v0.5.2",
+    "app.version": "OpenWorkflowDoctor v0.6.0",
     "toolbar.commandPalette": "命令面板",
     "toolbar.settings": "设置",
     "toolbar.metrics.nodes": "节点",
@@ -35,6 +35,7 @@ export const dictionaries = {
     "steps.humanReview": "人工审查",
     "steps.exportPacket": "导出审查包",
     "actions.importJson": "导入 JSON",
+    "actions.importDifyDsl": "导入 Dify DSL",
     "actions.importFromN8n": "从 n8n 导入",
     "actions.runDoctor": "运行 Doctor",
     "actions.previewPatchedIr": "预览补丁 IR",
@@ -86,6 +87,7 @@ export const dictionaries = {
     "explorer.empty": "还没有导入工作流。导入 JSON 或加载示例以开始。",
     "explorer.samples": "示例工作流",
     "explorer.n8nReadonly": "只读 n8n 来源",
+    "explorer.difyDsl": "Dify DSL 来源",
     "explorer.localReviewCopy": "Imported as local review copy",
     "explorer.refreshMarksStale": "Refresh marks existing reports stale when upstream changes",
     "explorer.importedOnly": "已导入，未诊断",
@@ -218,6 +220,7 @@ export const dictionaries = {
     "view.original": "原始",
     "command.title": "工作台命令",
     "command.importHint": "加载导出的 n8n JSON",
+    "command.importDifyHint": "加载 Dify DSL YAML 并导入本地审查副本",
     "command.importN8nHint": "从 n8n 读取工作流并导入本地审查副本",
     "command.runHint": "运行静态启发式诊断",
     "command.previewHint": "显示 WorkflowIR 补丁预览",
@@ -294,9 +297,10 @@ export const dictionaries = {
     "n8nImport.workflowList": "工作流列表",
     "n8nImport.active": "Active",
     "n8nImport.inactive": "Inactive"
+    ,"dify.warningBody": "仅用于诊断。OpenWorkflowDoctor 不会运行、发布或写回 Dify。"
   },
   "en-US": {
-    "app.version": "OpenWorkflowDoctor v0.5.2",
+    "app.version": "OpenWorkflowDoctor v0.6.0",
     "toolbar.commandPalette": "Command Palette",
     "toolbar.settings": "Settings",
     "toolbar.metrics.nodes": "Nodes",
@@ -327,6 +331,7 @@ export const dictionaries = {
     "steps.humanReview": "Human Review",
     "steps.exportPacket": "Export Packet",
     "actions.importJson": "Import JSON",
+    "actions.importDifyDsl": "Import Dify DSL",
     "actions.importFromN8n": "Import from n8n",
     "actions.runDoctor": "Run Doctor",
     "actions.previewPatchedIr": "Preview Patched IR",
@@ -378,6 +383,7 @@ export const dictionaries = {
     "explorer.empty": "No workflows imported yet. Import JSON or load a sample to start.",
     "explorer.samples": "Sample workflows",
     "explorer.n8nReadonly": "Read-only n8n source",
+    "explorer.difyDsl": "Dify DSL source",
     "explorer.localReviewCopy": "Imported as local review copy",
     "explorer.refreshMarksStale": "Refresh marks existing reports stale when upstream changes",
     "explorer.importedOnly": "Imported, not diagnosed",
@@ -510,6 +516,7 @@ export const dictionaries = {
     "view.original": "Original",
     "command.title": "Workbench commands",
     "command.importHint": "Load exported n8n JSON",
+    "command.importDifyHint": "Load Dify DSL YAML as a local review copy",
     "command.importN8nHint": "Read a workflow from n8n and import a local review copy",
     "command.runHint": "Run Static heuristic diagnostics",
     "command.previewHint": "Show WorkflowIR Patch Preview",
@@ -586,6 +593,7 @@ export const dictionaries = {
     "n8nImport.workflowList": "Workflow list",
     "n8nImport.active": "Active",
     "n8nImport.inactive": "Inactive"
+    ,"dify.warningBody": "Imported for diagnosis only. OpenWorkflowDoctor will not run, publish, or write back to Dify."
   }
 } as const;
 

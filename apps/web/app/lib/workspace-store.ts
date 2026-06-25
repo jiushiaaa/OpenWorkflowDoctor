@@ -4,12 +4,13 @@ import type {
   DoctorReviewPacket,
   HumanReview,
   HumanReviewDecision,
-  WorkflowIR
+  WorkflowIR,
+  WorkflowSourceMetadata
 } from "@openworkflowdoctor/workflow-ir";
 import { aiPatchProposalCandidateSchema } from "@openworkflowdoctor/workflow-ir";
 import { z } from "zod";
 
-export type WorkflowDocumentSourceKind = "imported-file" | "sample" | "migrated-v0.2" | "n8n-readonly";
+export type WorkflowDocumentSourceKind = "imported-file" | "sample" | "migrated-v0.2" | "n8n-readonly" | "dify-dsl";
 export type LatestReportState = "not-run" | "ready" | "stale";
 export type ReviewMode = "original" | "patched";
 export type WorkspaceConsoleTab = "summary" | "risks" | "ai" | "patch" | "verification" | "packet" | "logs";
@@ -60,6 +61,7 @@ export type WorkflowDocument = {
   reviewPacketArtifactIds: string[];
   aiPatchProposalState: AiPatchProposalState;
   readOnlySource?: N8nReadOnlySourceMetadata;
+  sourceMetadata?: WorkflowSourceMetadata;
 };
 
 export type ReviewPacketArtifact = {
@@ -80,6 +82,7 @@ export type WorkflowDocumentInput = {
   request?: string;
   now?: string;
   readOnlySource?: N8nReadOnlySourceMetadata;
+  sourceMetadata?: WorkflowSourceMetadata;
 };
 
 export type N8nReadOnlySourceMetadata = {
@@ -144,7 +147,7 @@ const humanReviewDecisionSchema = z.enum(["undecided", "accepted", "held", "reje
 const latestReportStateSchema = z.enum(["not-run", "ready", "stale"]);
 const reviewModeSchema = z.enum(["original", "patched"]);
 const workspaceConsoleTabSchema = z.enum(["summary", "risks", "ai", "patch", "verification", "packet", "logs"]);
-const sourceKindSchema = z.enum(["imported-file", "sample", "migrated-v0.2", "n8n-readonly"]);
+const sourceKindSchema = z.enum(["imported-file", "sample", "migrated-v0.2", "n8n-readonly", "dify-dsl"]);
 const nodeTypeFamilySchema = z.enum(["known", "unknown"]);
 const parameterValueTypeSchema = z.enum(["array", "boolean", "null", "number", "object", "string", "unknown"]);
 const aiPatchProposalStateStatusSchema = z.enum([
@@ -185,14 +188,56 @@ const edgeIrSchema = z.object({
   sourceNodeId: z.string().min(1),
   targetNodeId: z.string().min(1),
   sourceOutput: z.string().min(1),
-  sourceOutputIndex: z.number().int().nonnegative()
+  sourceOutputIndex: z.number().int().nonnegative(),
+  targetInput: z.string().min(1).optional()
+}).strict();
+
+const workflowSourceDiagnosticSchema = z.object({
+  code: z.string().min(1),
+  message: z.string().min(1),
+  severity: z.enum(["low", "medium", "high", "critical"]),
+  nodeId: z.string().min(1).optional(),
+  evidence: z.array(z.string())
+}).strict();
+
+const workflowSourceMetadataSchema = z.object({
+  sourceKind: z.enum(["n8n-json", "n8n-readonly", "dify-dsl"]),
+  sourcePlatform: z.string().min(1),
+  sourceVersion: z.string().min(1).optional(),
+  sourceAppMode: z.string().min(1).optional(),
+  sourceLabel: z.string().min(1).optional(),
+  app: z.object({
+    name: z.string().min(1),
+    description: z.string().optional(),
+    mode: z.string().min(1).optional(),
+    icon: z.string().optional(),
+    iconBackground: z.string().optional(),
+    useIconAsAnswerIcon: z.boolean().optional()
+  }).strict().optional(),
+  nodeCount: z.number().int().nonnegative(),
+  edgeCount: z.number().int().nonnegative(),
+  redactionSummary: z.object({
+    redactedValueCount: z.number().int().nonnegative(),
+    redactedKeys: z.array(z.string()),
+    notes: z.array(z.string())
+  }).strict(),
+  parserWarnings: z.array(z.string()),
+  diagnostics: z.array(workflowSourceDiagnosticSchema),
+  environmentVariables: z.array(z.object({
+    name: z.string().min(1),
+    declaredType: z.string().min(1).optional(),
+    valueExisted: z.boolean(),
+    redacted: z.boolean(),
+    redactionReason: z.string().min(1).optional()
+  }).strict()).optional()
 }).strict();
 
 const workflowIrSchema = z.object({
   id: z.string().min(1).optional(),
   name: z.string().min(1),
   nodes: z.array(nodeIrSchema),
-  edges: z.array(edgeIrSchema)
+  edges: z.array(edgeIrSchema),
+  source: workflowSourceMetadataSchema.optional()
 }).strict();
 
 const humanReviewSchema = z.object({
@@ -253,7 +298,8 @@ const workflowDocumentSchema = z.object({
   selectedNodeId: z.string().min(1).nullable(),
   reviewPacketArtifactIds: z.array(z.string().min(1)),
   aiPatchProposalState: aiPatchProposalStateSchema,
-  readOnlySource: n8nReadOnlySourceMetadataSchema.optional()
+  readOnlySource: n8nReadOnlySourceMetadataSchema.optional(),
+  sourceMetadata: workflowSourceMetadataSchema.optional()
 }).strict();
 
 const reviewPacketArtifactSchema = z.object({
@@ -287,7 +333,8 @@ export function createWorkflowDocumentFromWorkflowIr(input: WorkflowDocumentInpu
     activeTab: "summary",
     selectedNodeId: workflow.nodes[0]?.id ?? null,
     reviewPacketArtifactIds: [],
-    aiPatchProposalState: createEmptyAiPatchProposalState()
+    aiPatchProposalState: createEmptyAiPatchProposalState(),
+    ...(input.sourceMetadata || workflow.source ? { sourceMetadata: input.sourceMetadata ?? workflow.source } : {})
   };
 
   if (input.readOnlySource) {

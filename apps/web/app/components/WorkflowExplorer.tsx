@@ -40,6 +40,9 @@ export function WorkflowExplorer({
           <button type="button" onClick={onImportClick}>
             {t("actions.importJson")}
           </button>
+          <button type="button" onClick={onImportClick}>
+            {t("actions.importDifyDsl")}
+          </button>
           <button type="button" onClick={onImportN8nClick}>
             {t("actions.importFromN8n")}
           </button>
@@ -58,6 +61,7 @@ export function WorkflowExplorer({
               >
                 <strong>{workflow.name}</strong>
                 {workflow.sourceKind === "n8n-readonly" ? <small>{t("explorer.n8nReadonly")}</small> : null}
+                {workflow.sourceKind === "dify-dsl" ? <small>{t("explorer.difyDsl")}</small> : null}
                 <small>{workflow.statusLabel}</small>
                 <small>{workflow.humanReviewLabel}</small>
                 <small>{workflow.packetLabel}</small>

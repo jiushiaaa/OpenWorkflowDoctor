@@ -4,11 +4,11 @@ Local-first Workflow Review IDE for existing n8n workflows.
 
 OpenWorkflowDoctor reviews workflows. It does not run them.
 
-Current stable release: `v0.5.2` Onboarding and local deployment polish.
+Current freeze candidate: `v0.6.0` Dify DSL YAML Import.
 
 It is not a workflow builder, workflow runtime, automatic n8n fixer, or production n8n mutator.
 
-It turns exported n8n JSON or optional read-only n8n imports into a secret-safe WorkflowIR, static risk report, structured patch preview, verifier result, human review checklist, and exportable Review Packet.
+It turns exported n8n JSON, optional read-only n8n imports, or Dify DSL YAML into a secret-safe WorkflowIR, static risk report, structured patch preview, verifier result, human review checklist, and exportable Review Packet.
 
 AI can explain and propose structured `PatchOperation` candidates, but deterministic validation, verifier gates, and human review remain required.
 
@@ -18,6 +18,7 @@ AI can explain and propose structured `PatchOperation` candidates, but determini
 
 - Reviews exported n8n workflow JSON locally.
 - Optionally imports workflows from n8n through read-only workflow API calls.
+- Imports Dify DSL YAML as a local diagnosis-only review copy.
 - Shows graph structure, static risks, patch previews, verifier gates, and review packets.
 - Keeps AI suggestions reviewable and bounded by structured validation.
 - Never executes workflows, reads credentials, writes back to n8n, activates/deactivates workflows, or exports n8n-importable patched workflows.
@@ -69,6 +70,7 @@ For local deployment details, see [Local Deployment](docs/local-deployment.md). 
 
 - Import exported n8n workflow JSON in the browser.
 - Import selected workflows from n8n as local read-only review copies.
+- Import Dify DSL `.yml` / `.yaml` files as local diagnosis-only review copies.
 - Parse workflow JSON into secret-safe `WorkflowIR`.
 - Store multiple workflow reviews in a local IndexedDB workspace.
 - Switch active workflows from Workflow Explorer without rerunning Doctor.
@@ -96,6 +98,7 @@ OpenWorkflowDoctor is local-first and review-first.
 - n8n API keys are stored session-only and are not included in `WorkflowIR`, `DoctorReviewPacket`, Review Packet Artifacts, or Workflow Documents.
 - Sensitive parameter previews such as API keys, authorization headers, passwords, tokens, and secrets are redacted before they enter WorkflowIR, UI, or review exports.
 - n8n read-only import uses only workflow list/get endpoints with `excludePinnedData=true`.
+- Dify DSL import parses local YAML only and never calls Dify APIs, fetches resources, executes workflows, publishes, or writes back.
 - Static diagnostics and deterministic patch generation work without an LLM.
 - AI Explainer remains advisory-only.
 - AI Patch Proposal can propose validated structured changes, but it cannot apply patches, mutate raw n8n JSON, change verifier status, or change human review.
@@ -127,10 +130,10 @@ Out of scope for the current MVP:
 | v0.4.4 | Frozen | Public demo polish, README demo media, issue templates, and feedback roadmap |
 | v0.5.0 | Frozen | Read-only n8n Import. Import only, no execution and no write-back. |
 | v0.5.1 | Frozen | Real n8n import polish, CORS/proxy hardening, and manual smoke checklist. |
-| v0.5.2 | Current stable | Onboarding, Docker Compose local deployment, demo mode, troubleshooting, and reset polish. |
-| v0.6.0 | Planned | Execution Logs and Observability Analysis for failure paths, slow nodes, and error hotspots. |
+| v0.5.2 | Frozen | Onboarding, Docker Compose local deployment, demo mode, troubleshooting, and reset polish. |
+| v0.6.0 | Current freeze candidate | Dify DSL YAML Import. Import only, no Dify API, no execution, no publish, and no write-back. |
 
-The current product definition through v0.5.2:
+The current product definition through v0.6.0:
 
 OpenWorkflowDoctor is a local-first Workflow Review IDE. It supports importing multiple n8n workflows from JSON or optional read-only n8n workflow reads, running static diagnostics, previewing WorkflowIR patches, reviewing verifier output, recording human review, exporting Review Packets, generating advisory AI explanations, and requesting constrained AI PatchOperation proposals through configurable BYOK providers. AI never participates in final acceptance.
 
@@ -149,7 +152,7 @@ n8n JSON
   -> human accept / hold / reject
 ```
 
-For read-only n8n import details, see [v0.5 Read-only n8n Import](docs/n8n-readonly-import.md). For real-instance validation, see [Real n8n Import Smoke Test](docs/real-n8n-import-smoke-test.md). For public demo readiness, see [Public Demo Checklist](docs/public-demo-checklist.md).
+For read-only n8n import details, see [v0.5 Read-only n8n Import](docs/n8n-readonly-import.md). For Dify YAML import details, see [v0.6 Dify DSL Import](docs/dify-dsl-import.md). For real-instance validation, see [Real n8n Import Smoke Test](docs/real-n8n-import-smoke-test.md). For public demo readiness, see [Public Demo Checklist](docs/public-demo-checklist.md).
 
 Core rules:
 
@@ -167,6 +170,7 @@ Core rules:
 - `packages/workflow-ai`: advisory AI explanation, constrained AI patch proposal, provider registry, and provider helper contracts.
 - `apps/web`: local browser workbench.
 - `samples/n8n`: demo exported workflow JSON.
+- `samples/dify`: demo Dify DSL YAML.
 
 ## Local Development
 
@@ -208,6 +212,7 @@ npm audit
 - [Feedback Guide](docs/feedback-guide.md)
 - [Provider presets and compatibility](docs/provider-presets-compatibility.md)
 - [Read-only n8n import](docs/n8n-readonly-import.md)
+- [Dify DSL import](docs/dify-dsl-import.md)
 - [Real n8n Import Smoke Test](docs/real-n8n-import-smoke-test.md)
 - [Manual AI Patch Proposal smoke test](docs/manual-ai-patch-smoke-test.md)
 - [Real-model smoke results v0.4.2](docs/real-model-smoke-results-v0.4.2.md)

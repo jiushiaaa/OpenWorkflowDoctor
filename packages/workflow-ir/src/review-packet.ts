@@ -30,6 +30,7 @@ export function createDoctorReviewPacket(
     schemaVersion: "openworkflowdoctor.review-packet.v1",
     generatedAt,
     workflowName: report.workflow.name,
+    ...(report.workflow.source ? { source: cloneJson(report.workflow.source) } : {}),
     reviewTargetFingerprint: createReviewTargetFingerprint(report, acceptanceChecklist),
     acceptanceRecommendation: report.acceptanceRecommendation,
     riskDelta: {

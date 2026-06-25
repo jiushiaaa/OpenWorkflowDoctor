@@ -1,6 +1,6 @@
 # Roadmap
 
-OpenWorkflowDoctor is a local-first Workflow Review IDE for existing n8n workflows. It is not a workflow builder, workflow runtime, automatic n8n fixer, or production n8n connector.
+OpenWorkflowDoctor is a local-first Workflow Review IDE for existing workflow artifacts. It is not a workflow builder, workflow runtime, automatic workflow fixer, or production platform connector.
 
 ## Current Stable Release
 
@@ -9,7 +9,7 @@ OpenWorkflowDoctor is a local-first Workflow Review IDE for existing n8n workflo
 The current product loop is:
 
 ```text
-import exported n8n workflow
+import exported n8n workflow, read-only n8n workflow, or Dify DSL YAML
   -> parse into secret-safe WorkflowIR
   -> run static diagnostics
   -> generate Review Packet
@@ -72,7 +72,20 @@ Required design questions:
 - How are provider keys and n8n API keys kept separate?
 - What evidence proves no execution or write-back path exists?
 
-## v0.6.0 - Planned: Execution Logs and Observability Analysis
+## v0.6.0 - Freeze Candidate: Dify DSL Import
+
+Scope:
+
+- Local `.yml` / `.yaml` upload.
+- Dify DSL to secret-safe WorkflowIR.
+- Dify source metadata in workspace and Review Packet.
+- Dify-specific diagnostics for secrets, code, tools, retrieval resources, branches, app modes, and DSL versions.
+- No Dify API connection.
+- No workflow execution.
+- No publish or write-back.
+- No patched Dify DSL export.
+
+## v0.7.0+ - Planned: Execution Logs and Observability Analysis
 
 Possible later scope:
 

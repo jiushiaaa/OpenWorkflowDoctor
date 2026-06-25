@@ -14,6 +14,10 @@ export function diagnoseWorkflow(workflow: WorkflowIR): RiskIssue[] {
   const issues: RiskIssue[] = [];
   const adjacency = buildAdjacencyMap(workflow);
 
+  if (workflow.source?.sourceKind === "dify-dsl") {
+    issues.push(...diagnoseDifyWorkflow(workflow));
+  }
+
   for (const node of getIsolatedNodes(workflow)) {
     issues.push(
       createNodeIssue("isolated_node", {
@@ -152,6 +156,118 @@ export function diagnoseWorkflow(workflow: WorkflowIR): RiskIssue[] {
   return issues;
 }
 
+function diagnoseDifyWorkflow(workflow: WorkflowIR): RiskIssue[] {
+  const issues: RiskIssue[] = [];
+  const sourceDiagnostics = workflow.source?.diagnostics ?? [];
+
+  for (const diagnostic of sourceDiagnostics) {
+    issues.push({
+      id: createDifyDiagnosticIssueId(diagnostic.code, diagnostic.nodeId, diagnostic.evidence),
+      severity: diagnostic.severity,
+      ...(diagnostic.nodeId ? { nodeId: diagnostic.nodeId } : {}),
+      title: createDifyDiagnosticTitle(diagnostic.code),
+      explanation: diagnostic.message,
+      suggestedFix: createDifyDiagnosticFix(diagnostic.code),
+      evidence: diagnostic.evidence
+    });
+  }
+
+  if (!workflow.nodes.some((node) => node.type === "dify.start")) {
+    issues.push(createWorkflowIssue("dify_missing_start_node", "high", "Missing Dify start node", "This Dify workflow has no start node in WorkflowIR.", "Add or restore a Dify start node before relying on this flow.", ["No dify.start node found"]));
+  }
+
+  if (!workflow.nodes.some((node) => node.type === "dify.end" || node.type === "dify.answer")) {
+    issues.push(createWorkflowIssue("dify_missing_terminal_node", "high", "Missing Dify terminal node", "This Dify workflow has no end or answer node in WorkflowIR.", "Add a clear terminal end or answer path.", ["No dify.end or dify.answer node found"]));
+  }
+
+  for (const node of workflow.nodes) {
+    if (isDifySideEffectNode(node)) {
+      issues.push(
+        createNodeIssue("dify_side_effect_node", {
+          node,
+          severity: "high",
+          title: "Dify node may perform external side effects",
+          explanation: "This Dify tool, HTTP, or plugin-style node may call external systems if executed in Dify.",
+          suggestedFix: "Review this node manually and add idempotency, timeout, and fallback behavior in the source workflow.",
+          evidence: [`Node type: ${node.type}`]
+        })
+      );
+    }
+
+    if (hasParameterKeyOrPreviewLike(node, ["uploadfileid", "uploadedid", "fileid", "localfile"])) {
+      issues.push(
+        createNodeIssue("dify_file_upload_id_reference", {
+          node,
+          severity: "medium",
+          title: "Dify file default references workspace upload id",
+          explanation: "A file or file-list default appears to reference a Dify workspace-private uploaded file id.",
+          suggestedFix: "Clear file defaults and ask the destination workspace user to upload fresh files.",
+          evidence: node.parameters.map((parameter) => `${parameter.key}: ${parameter.preview}`)
+        })
+      );
+    }
+
+    if (node.type === "dify.code") {
+      issues.push(
+        createNodeIssue("dify_code_node_present", {
+          node,
+          severity: "medium",
+          title: "Dify code node requires review",
+          explanation: "Code nodes can hide complex behavior that static graph checks cannot fully verify.",
+          suggestedFix: "Review code logic manually before accepting workflow changes.",
+          evidence: [`Node name: ${node.name}`]
+        })
+      );
+
+      if (
+        hasParameterKeyOrPreviewLike(node, ["fetch", "http", "request", "filesystem", "fs", "eval", "secret", "token"]) ||
+        node.parameters.some((parameter) => parameter.redacted)
+      ) {
+        issues.push(
+          createNodeIssue("dify_code_node_unsafe_reference", {
+            node,
+            severity: "high",
+            title: "Dify code node references unsafe capability",
+            explanation: "The code node appears to reference network, filesystem, eval, token, or secret-related behavior.",
+            suggestedFix: "Manually inspect the source code and isolate side effects behind explicit review paths.",
+            evidence: node.parameters.map((parameter) => `${parameter.key}: ${parameter.preview}`)
+          })
+        );
+      }
+    }
+
+    if (node.type === "dify.retrieval" && hasParameterLike(node, ["dataset", "knowledge", "resource"])) {
+      issues.push(
+        createNodeIssue("dify_retrieval_external_resource", {
+          node,
+          severity: "medium",
+          title: "Dify retrieval references external resources",
+          explanation: "Knowledge retrieval may depend on Dify workspace datasets that OpenWorkflowDoctor does not fetch or verify.",
+          suggestedFix: "Confirm referenced datasets exist and are safe in the destination Dify workspace.",
+          evidence: node.parameters.map((parameter) => `${parameter.key}: ${parameter.preview}`)
+        })
+      );
+    }
+
+    if (isDifyConditionNode(node) && !hasDifyFallbackRoute(workflow, node.id)) {
+      issues.push(
+        createNodeIssue("dify_condition_without_fallback", {
+          node,
+          severity: "medium",
+          title: "Dify condition has no fallback route",
+          explanation: "This condition node does not expose an obvious default, false, or fallback route.",
+          suggestedFix: "Add a fallback/default branch or confirm all cases are intentionally terminal.",
+          evidence: workflow.edges
+            .filter((edge) => edge.sourceNodeId === node.id)
+            .map((edge) => `${edge.sourceOutput}[${edge.sourceOutputIndex}] -> ${edge.targetNodeId}`)
+        })
+      );
+    }
+  }
+
+  return issues;
+}
+
 function createNodeIssue(ruleId: string, input: RiskFactoryInput): RiskIssue {
   return {
     id: `${ruleId}:${input.node.id}`,
@@ -162,6 +278,73 @@ function createNodeIssue(ruleId: string, input: RiskFactoryInput): RiskIssue {
     suggestedFix: input.suggestedFix,
     evidence: input.evidence
   };
+}
+
+function createWorkflowIssue(
+  id: string,
+  severity: RiskSeverity,
+  title: string,
+  explanation: string,
+  suggestedFix: string,
+  evidence: string[]
+): RiskIssue {
+  return {
+    id,
+    severity,
+    title,
+    explanation,
+    suggestedFix,
+    evidence
+  };
+}
+
+function createDifyDiagnosticIssueId(code: string, nodeId: string | undefined, evidence: string[]): string {
+  if (code === "dify_edge_unknown_target") {
+    const source = evidence.find((item) => item.startsWith("Source: "))?.replace("Source: ", "") || "unknown";
+    const target = evidence.find((item) => item.startsWith("Target: "))?.replace("Target: ", "") || "unknown";
+    return `${code}:${source}:${target}`;
+  }
+  return nodeId ? `${code}:${nodeId}` : code;
+}
+
+function createDifyDiagnosticTitle(code: string): string {
+  switch (code) {
+    case "dify_missing_node_id":
+      return "Dify node is missing id";
+    case "dify_missing_node_data":
+      return "Dify node is missing data";
+    case "dify_duplicate_node_id":
+      return "Dify node id is duplicated";
+    case "dify_unknown_node_type":
+      return "Dify node type is unknown";
+    case "dify_edge_unknown_source":
+    case "dify_edge_unknown_target":
+      return "Dify edge references an unknown node";
+    case "dify_secret_env_materialized":
+      return "Dify secret environment variable is materialized";
+    case "dify_unsupported_dsl_version":
+      return "Unsupported Dify DSL version";
+    case "dify_unsupported_app_mode":
+      return "Unsupported Dify app mode";
+    default:
+      return "Dify import warning";
+  }
+}
+
+function createDifyDiagnosticFix(code: string): string {
+  switch (code) {
+    case "dify_secret_env_materialized":
+      return "Clear the secret value in the source DSL and configure it inside the target Dify workspace.";
+    case "dify_edge_unknown_source":
+    case "dify_edge_unknown_target":
+      return "Reconnect or remove the broken edge in the Dify workflow.";
+    case "dify_unsupported_dsl_version":
+      return "Review the DSL version manually before relying on automated diagnostics.";
+    case "dify_unsupported_app_mode":
+      return "Import only workflow, chatflow, or advanced-chat Dify apps for v0.6.";
+    default:
+      return "Review the source Dify DSL and re-export a valid workflow.";
+  }
 }
 
 function hasErrorBranch(workflow: WorkflowIR, nodeId: string): boolean {
@@ -283,7 +466,7 @@ function isHighRiskSideEffectNode(node: NodeIR): boolean {
 }
 
 function isControlFlowNode(node: NodeIR): boolean {
-  return includesAnyNodeIdentity(node, ["n8n-nodes-base.if", "n8n-nodes-base.switch", "manualtrigger"]);
+  return includesAnyNodeIdentity(node, ["n8n-nodes-base.if", "n8n-nodes-base.switch", "manualtrigger", "dify.condition"]);
 }
 
 function isAuditTrailNode(node: NodeIR): boolean {
@@ -306,6 +489,25 @@ function isRecordKeepingNode(node: NodeIR): boolean {
   ]);
 }
 
+function isDifySideEffectNode(node: NodeIR): boolean {
+  return (
+    node.type === "dify.tool" ||
+    node.type === "dify.http-request" ||
+    includesAnyNodeIdentity(node, ["plugin", "http", "tool"])
+  );
+}
+
+function isDifyConditionNode(node: NodeIR): boolean {
+  return node.type.startsWith("dify.condition.");
+}
+
+function hasDifyFallbackRoute(workflow: WorkflowIR, nodeId: string): boolean {
+  const outputs = workflow.edges
+    .filter((edge) => edge.sourceNodeId === nodeId)
+    .map((edge) => edge.sourceOutput.toLowerCase());
+  return outputs.some((output) => ["default", "fallback", "false", "else"].includes(output));
+}
+
 function includesAnyNodeIdentity(node: NodeIR, needles: string[]): boolean {
   const haystack = `${node.name} ${node.type}`.toLowerCase();
 
@@ -315,6 +517,13 @@ function includesAnyNodeIdentity(node: NodeIR, needles: string[]): boolean {
 function hasParameterLike(node: NodeIR, needles: string[]): boolean {
   const normalizedKeys = parameterKeys(node).map(normalize);
   return needles.some((needle) => normalizedKeys.some((key) => key.includes(normalize(needle))));
+}
+
+function hasParameterKeyOrPreviewLike(node: NodeIR, needles: string[]): boolean {
+  const haystack = node.parameters
+    .flatMap((parameter) => [parameter.key, parameter.preview])
+    .map(normalize);
+  return needles.some((needle) => haystack.some((value) => value.includes(normalize(needle))));
 }
 
 function parameterKeys(node: NodeIR): string[] {

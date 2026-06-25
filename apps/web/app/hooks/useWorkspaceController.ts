@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { createDoctorReportFromWorkflow, parseN8nWorkflow } from "@openworkflowdoctor/workflow-ir";
+import { createDoctorReportFromWorkflow, difyDslSourceAdapter, importDifyDslWorkflow, parseN8nWorkflow } from "@openworkflowdoctor/workflow-ir";
 import type { SampleWorkflowCatalogItem } from "../lib/sample-workflows";
 import {
   createIndexedDbWorkspaceRepository,
@@ -76,12 +76,20 @@ export function useWorkspaceController({ onWorkspaceChanged }: { onWorkspaceChan
         throw new Error("Local workspace storage is not ready.");
       }
       const text = await file.text();
-      const json = JSON.parse(text) as unknown;
-      const parsedWorkflow = parseN8nWorkflow(json);
+      const difyAccepted = difyDslSourceAdapter.acceptsFile(file.name, file.type);
+      const importedDify = difyAccepted
+        ? importDifyDslWorkflow({
+            fileName: file.name,
+            mimeType: file.type,
+            content: text
+          })
+        : null;
+      const parsedWorkflow = importedDify?.workflow ?? parseN8nWorkflow(JSON.parse(text) as unknown);
       const document = createWorkflowDocumentFromWorkflowIr({
         workflow: parsedWorkflow,
-        sourceKind: "imported-file",
-        sourceLabel: file.name
+        sourceKind: importedDify ? "dify-dsl" : "imported-file",
+        sourceLabel: file.name,
+        ...(importedDify ? { sourceMetadata: importedDify.metadata } : {})
       });
 
       await repository.saveWorkflowDocument(document);

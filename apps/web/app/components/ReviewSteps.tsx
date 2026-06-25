@@ -73,7 +73,7 @@ export function ReviewSteps({
       <input
         ref={fileInputRef}
         type="file"
-        accept="application/json,.json"
+        accept="application/json,.json,.yml,.yaml,application/x-yaml,text/yaml"
         onChange={(event) => onImportFile(event.target.files?.[0])}
       />
 
@@ -98,6 +98,14 @@ export function ReviewSteps({
             <span>{sourceLabel}</span>
             <span>{t("explorer.localReviewCopy")}</span>
             <span>{t("explorer.refreshMarksStale")}</span>
+          </div>
+        ) : null}
+        {sourceKind === "dify-dsl" ? (
+          <div className="source-badge">
+            <strong>{t("explorer.difyDsl")}</strong>
+            <span>{sourceLabel}</span>
+            <span>{t("explorer.localReviewCopy")}</span>
+            <span>{t("dify.warningBody")}</span>
           </div>
         ) : null}
         {!workflowInput ? (

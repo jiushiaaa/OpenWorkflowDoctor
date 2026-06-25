@@ -3,7 +3,7 @@ import type { NodeIR, NodeParameterSummary, ParameterValueType } from "./types.j
 export const REDACTED_PREVIEW = "[redacted]";
 
 const SENSITIVE_KEY_PATTERN =
-  /(^|[^a-z])(api[-_ ]?key|authorization|bearer|client[-_ ]?secret|credentials?|oauth|access[-_ ]?token|password|passphrase|private[-_ ]?key|refresh[-_ ]?token|secret|token|test[-_ ]?url|production[-_ ]?url|webhook[-_ ]?(id|path|url))([^a-z]|$)/i;
+  /(^|[^a-z])(api[-_ ]?key|authorization|bearer|client[-_ ]?secret|credentials?|oauth|access[-_ ]?token|password|passphrase|private[-_ ]?key|refresh[-_ ]?token|secret|token|test[-_ ]?url|production[-_ ]?url|webhook[-_ ]?(id|path|url)|upload[-_ ]?file[-_ ]?id|uploaded[-_ ]?id|file[-_ ]?id|dataset[-_ ]?ids?|tenant[-_ ]?id|workspace[-_ ]?id|user[-_ ]?id|app[-_ ]?id|provider[-_ ]?credentials?)($|[^a-z])/i;
 const SENSITIVE_QUERY_KEY_PATTERN =
   /(^|[^a-z])(api[-_ ]?key|authorization|auth|client[-_ ]?secret|signature|access[-_ ]?token|refresh[-_ ]?token|secret|token)([^a-z]|$)/i;
 const SENSITIVE_STRING_PATTERN =

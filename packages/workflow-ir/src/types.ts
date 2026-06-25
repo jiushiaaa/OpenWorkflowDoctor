@@ -27,6 +27,50 @@ export type CredentialReferenceSummary = {
   credentialCount: number;
 };
 
+export type WorkflowSourceKind = "n8n-json" | "n8n-readonly" | "dify-dsl";
+
+export type RedactionSummary = {
+  redactedValueCount: number;
+  redactedKeys: string[];
+  notes: string[];
+};
+
+export type WorkflowSourceDiagnostic = {
+  code: string;
+  message: string;
+  severity: RiskSeverity;
+  nodeId?: string;
+  evidence: string[];
+};
+
+export type WorkflowSourceMetadata = {
+  sourceKind: WorkflowSourceKind;
+  sourcePlatform: string;
+  sourceVersion?: string;
+  sourceAppMode?: string;
+  sourceLabel?: string;
+  app?: {
+    name: string;
+    description?: string;
+    mode?: string;
+    icon?: string;
+    iconBackground?: string;
+    useIconAsAnswerIcon?: boolean;
+  };
+  nodeCount: number;
+  edgeCount: number;
+  redactionSummary: RedactionSummary;
+  parserWarnings: string[];
+  diagnostics: WorkflowSourceDiagnostic[];
+  environmentVariables?: {
+    name: string;
+    declaredType?: string;
+    valueExisted: boolean;
+    redacted: boolean;
+    redactionReason?: string;
+  }[];
+};
+
 export type NodeIR = {
   id: string;
   name: string;
@@ -42,6 +86,7 @@ export type EdgeIR = {
   targetNodeId: string;
   sourceOutput: string;
   sourceOutputIndex: number;
+  targetInput?: string;
 };
 
 export type WorkflowIR = {
@@ -49,6 +94,7 @@ export type WorkflowIR = {
   name: string;
   nodes: NodeIR[];
   edges: EdgeIR[];
+  source?: WorkflowSourceMetadata;
 };
 
 export type RiskIssue = {
@@ -283,6 +329,7 @@ export type DoctorReviewPacket = {
   schemaVersion: "openworkflowdoctor.review-packet.v1";
   generatedAt: string;
   workflowName: string;
+  source?: WorkflowSourceMetadata;
   reviewTargetFingerprint: string;
   acceptanceRecommendation: VerificationStatus;
   riskDelta: RiskDelta;

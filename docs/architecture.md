@@ -1,6 +1,27 @@
 # OpenWorkflowDoctor Architecture
 
-OpenWorkflowDoctor is a Workflow Reliability IDE for existing n8n workflows. The MVP reads exported workflow JSON or optional read-only n8n workflow definitions, converts them into deterministic `WorkflowIR`, detects static risks, proposes structured patches, and verifies whether changes are safe to accept. It does not execute workflows, read credentials, write back to n8n, or trigger external side effects.
+OpenWorkflowDoctor is a Workflow Reliability IDE for existing workflow artifacts. The MVP reads exported n8n workflow JSON, optional read-only n8n workflow definitions, or Dify DSL YAML, converts them into deterministic `WorkflowIR`, detects static risks, proposes structured patches, and verifies whether changes are safe to accept. It does not execute workflows, read credentials, write back to n8n or Dify, or trigger external side effects.
+
+## v0.6 Dify DSL Import Boundary
+
+v0.6 adds a local Dify DSL YAML import source while preserving the existing review boundary. It is not a Dify API integration and not a Dify workflow builder.
+
+The allowed data flow is:
+
+```text
+Dify .yml/.yaml DSL
+  -> difyDslSourceAdapter
+  -> importDifyDslWorkflow
+  -> secret-safe WorkflowIR
+  -> WorkflowDocument sourceKind: dify-dsl
+  -> existing Doctor report, PatchOperation preview, verifier, and Review Packet flow
+```
+
+The importer validates only the basic app/workflow graph shape: `kind`, `version`, `app`, `workflow`, `workflow.graph.nodes`, and `workflow.graph.edges`. Raw YAML is parsed in memory and is not stored in workspace documents. The persisted document stores `WorkflowIR`, sanitized source metadata, parser warnings, Dify diagnostics, and a redaction summary.
+
+Dify import does not call Dify APIs, execute workflows, publish, write back, inspect credentials, fetch datasets, fetch plugins, fetch files, fetch URLs, resolve workspace resources, or export patched Dify DSL.
+
+Review Packets record safe Dify source metadata such as `sourceKind: dify-dsl`, `sourcePlatform: dify`, DSL version, app name/mode, redaction summary, and parser warnings. They do not include raw YAML or secrets.
 
 ## v0.5 Read-only n8n Import Boundary
 
@@ -58,7 +79,7 @@ The workspace stores secret-safe `WorkflowIR` and derived review state. It does 
 Core workspace concepts:
 
 - `LocalWorkspace`: local container with a stable id, active workflow document id, and ordered workflow document ids.
-- `WorkflowDocument`: one imported workflow review session containing original `WorkflowIR`, patch request, latest `DoctorReport`, UI state, human review draft, and packet artifact ids.
+- `WorkflowDocument`: one imported workflow review session containing original `WorkflowIR`, source metadata, patch request, latest `DoctorReport`, UI state, human review draft, and packet artifact ids.
 - `ReviewPacketArtifact`: local saved/exported instance of a canonical `DoctorReviewPacket` for one workflow document.
 
 Review packets remain per workflow. The exported packet shape remains `DoctorReviewPacket`; the artifact wrapper exists only for local workspace bookkeeping.
@@ -149,6 +170,8 @@ n8n export JSON
   -> separate human accept / hold / reject decision
 ```
 
+Dify imports enter the same deterministic pipeline after `importDifyDslWorkflow` converts YAML to secret-safe `WorkflowIR`.
+
 The UI-facing deterministic entry point is `createDoctorReport(rawWorkflow, request)`. It returns the original workflow, summary, UI graph view model, diagnostics, patch proposal, readable patch diff, patched workflow, patched UI graph view model, patched diagnostics, verification report, and final acceptance recommendation.
 
 `createDoctorReviewPacket(report)` converts a `DoctorReport` into a serializable handoff artifact with a stable review target fingerprint, before/after risk counts, resolved/remaining/introduced issue ids, readable patch diff, structured operations, patched WorkflowIR, verifier output, an acceptance checklist derived from verifier gates, an optional human review decision, and `humanReviewValidation`.
@@ -176,6 +199,8 @@ Diagnostics evaluate the patched `WorkflowIR` shape, not only individual node pa
 - `doctor-report.ts`: end-to-end orchestration for the deterministic doctor flow.
 - `types.ts`: shared IR, risk, patch, and verification report types.
 - `n8n-parser.ts`: exported n8n JSON to `WorkflowIR`.
+- `dify-dsl-import.ts`: Dify DSL YAML to secret-safe `WorkflowIR` with source metadata, redaction summary, parser warnings, and Dify-specific diagnostics.
+- `workflow-source-adapter.ts`: minimal source adapter contract for local import sources.
 - `graph.ts`: adjacency maps and upstream/downstream graph helpers.
 - `view-model.ts`: deterministic UI graph view model with node positions, edge labels, and node risk badges.
 - `summary.ts`: deterministic workflow explanation for purpose, entry nodes, terminal nodes, side effects, risk counts, and recommended status.

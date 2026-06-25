@@ -182,6 +182,14 @@ export default function Home() {
       }
     },
     {
+      label: t("actions.importDifyDsl"),
+      hint: t("command.importDifyHint"),
+      disabled: false,
+      action: () => {
+        fileInputRef.current?.click();
+      }
+    },
+    {
       label: t("actions.importFromN8n"),
       hint: t("command.importN8nHint"),
       disabled: n8nConnections.length === 0,
