@@ -16,7 +16,9 @@ n8n workflow list/get response
   -> existing Doctor report, PatchOperation preview, verifier, and Review Packet flow
 ```
 
-The web client exposes only `testConnection`, `listWorkflows`, and `getWorkflow`. The allowed endpoints are `GET /workflows?excludePinnedData=true`, `GET /workflows?limit=1&excludePinnedData=true`, and `GET /workflows/{id}?excludePinnedData=true`. No generic n8n request helper is exposed to the UI.
+The web client exposes only `testConnection`, `listWorkflows`, and `getWorkflow`. The allowed n8n endpoints are `GET /workflows?excludePinnedData=true`, `GET /workflows?limit=1&excludePinnedData=true`, and `GET /workflows/{id}?excludePinnedData=true`. No generic n8n request helper is exposed to the UI.
+
+v0.5 used browser-direct reads and therefore depended on the n8n instance allowing browser CORS from the local workbench origin. v0.5.1 moves the default app path to a local Next.js allowlist proxy at `POST /api/n8n/readonly`. The browser calls only that local route. The route accepts explicit read-only actions, derives the upstream n8n URL internally, forces `excludePinnedData=true`, and forwards only GET requests to n8n. It does not accept arbitrary methods or paths and does not log or persist the n8n API key server-side.
 
 n8n connection metadata is stored separately from workflow documents. Local storage may contain the connection id, label, normalized API root, environment label, auth header name, timestamps, and connection status. The n8n API key is session-only by default and is not stored in IndexedDB, WorkflowIR, Review Packets, Review Packet Artifacts, or Workflow Documents.
 

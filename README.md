@@ -4,7 +4,7 @@ Local-first Workflow Review IDE for existing n8n workflows.
 
 OpenWorkflowDoctor reviews workflows. It does not run them.
 
-Current stable release: `v0.4.4` Public Demo Polish.
+Current stable release: `v0.5.1` Real n8n import polish.
 
 It is not a workflow builder, workflow runtime, automatic n8n fixer, or production n8n mutator.
 
@@ -109,11 +109,12 @@ Out of scope for the current MVP:
 | v0.4.0 | Frozen | Constrained AI Patch Proposal. AI can only output validated structured `PatchOperation` data. |
 | v0.4.2 | Frozen | Real-model happy path and provider compatibility smoke results |
 | v0.4.3 | Frozen | Provider Presets and Compatibility Registry |
-| v0.4.4 | Current stable | Public demo polish, README demo media, issue templates, and feedback roadmap |
-| v0.5.0 | Implemented, audit pending | Read-only n8n Import. Import only, no execution and no write-back. |
+| v0.4.4 | Frozen | Public demo polish, README demo media, issue templates, and feedback roadmap |
+| v0.5.0 | Frozen | Read-only n8n Import. Import only, no execution and no write-back. |
+| v0.5.1 | Current stable | Real n8n import polish, CORS/proxy hardening, and manual smoke checklist. |
 | v0.6.0 | Planned | Execution Logs and Observability Analysis for failure paths, slow nodes, and error hotspots. |
 
-The current product definition through v0.4.4:
+The current product definition through v0.5.1:
 
 OpenWorkflowDoctor is a local-first Workflow Review IDE. It supports importing multiple n8n workflows from JSON or optional read-only n8n workflow reads, running static diagnostics, previewing WorkflowIR patches, reviewing verifier output, recording human review, exporting Review Packets, generating advisory AI explanations, and requesting constrained AI PatchOperation proposals through configurable BYOK providers. AI never participates in final acceptance.
 
@@ -132,7 +133,7 @@ n8n JSON
   -> human accept / hold / reject
 ```
 
-For read-only n8n import details, see [v0.5 Read-only n8n Import](docs/n8n-readonly-import.md).
+For read-only n8n import details, see [v0.5 Read-only n8n Import](docs/n8n-readonly-import.md). For real-instance validation, see [Real n8n Import Smoke Test](docs/real-n8n-import-smoke-test.md).
 
 Core rules:
 
@@ -190,6 +191,8 @@ npm audit
 - [Demo Guide](docs/demo-guide.md)
 - [Feedback Guide](docs/feedback-guide.md)
 - [Provider presets and compatibility](docs/provider-presets-compatibility.md)
+- [Read-only n8n import](docs/n8n-readonly-import.md)
+- [Real n8n Import Smoke Test](docs/real-n8n-import-smoke-test.md)
 - [Manual AI Patch Proposal smoke test](docs/manual-ai-patch-smoke-test.md)
 - [Real-model smoke results v0.4.2](docs/real-model-smoke-results-v0.4.2.md)
 - [Public GitHub audit notes v0.3.1](docs/public-github-audit-v0.3.1.md)

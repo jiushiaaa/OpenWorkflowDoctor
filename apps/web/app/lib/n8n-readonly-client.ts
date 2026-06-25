@@ -23,16 +23,23 @@ export type N8nConnectionTestResult = {
 };
 
 type FetchLike = (input: string | URL | Request, init?: RequestInit) => Promise<Response>;
+type N8nReadonlyClientOptions = {
+  transport?: "direct" | "proxy";
+};
 
-export function createN8nReadonlyClient(fetchLike: FetchLike = fetch) {
+export function createN8nReadonlyClient(fetchLike: FetchLike = fetch, options: N8nReadonlyClientOptions = {}) {
+  const transport = options.transport ?? "direct";
+
   return {
     async listWorkflows(request: N8nReadonlyRequest): Promise<N8nWorkflowListItem[]> {
       const workflows: N8nWorkflowListItem[] = [];
       let cursor: string | null = null;
 
       do {
-        const url = createWorkflowListUrl(request.connection, cursor);
-        const response = await fetchJson(url, request);
+        const response =
+          transport === "proxy"
+            ? await fetchProxyJson({ ...request, action: "listWorkflows", cursor })
+            : await fetchDirectJson(createWorkflowListUrl(request.connection, cursor), request);
         const page = parseWorkflowListResponse(response);
         workflows.push(...page.data);
         cursor = page.nextCursor;
@@ -46,10 +53,16 @@ export function createN8nReadonlyClient(fetchLike: FetchLike = fetch) {
         throw new Error("Invalid n8n workflow id.");
       }
 
-      return fetchJson(`${request.connection.baseUrl}/workflows/${encodeURIComponent(request.workflowId)}?excludePinnedData=true`, request);
+      return transport === "proxy"
+        ? fetchProxyJson({ ...request, action: "getWorkflow" })
+        : fetchDirectJson(`${request.connection.baseUrl}/workflows/${encodeURIComponent(request.workflowId)}?excludePinnedData=true`, request);
     },
 
     async testConnection(request: N8nReadonlyRequest): Promise<N8nConnectionTestResult> {
+      if (transport === "proxy") {
+        return fetchProxyJson({ ...request, action: "testConnection" }) as Promise<N8nConnectionTestResult>;
+      }
+
       const response = await fetchLike(`${request.connection.baseUrl}/workflows?limit=1&excludePinnedData=true`, {
         method: "GET",
         headers: createHeaders(request)
@@ -61,7 +74,7 @@ export function createN8nReadonlyClient(fetchLike: FetchLike = fetch) {
     }
   };
 
-  async function fetchJson(url: string, request: N8nReadonlyRequest): Promise<unknown> {
+  async function fetchDirectJson(url: string, request: N8nReadonlyRequest): Promise<unknown> {
     const response = await fetchLike(url, {
       method: "GET",
       headers: createHeaders(request)
@@ -69,6 +82,35 @@ export function createN8nReadonlyClient(fetchLike: FetchLike = fetch) {
     if (!response.ok) {
       throw new Error(`n8n read-only request failed with ${response.status}.`);
     }
+    return response.json() as Promise<unknown>;
+  }
+
+  async function fetchProxyJson(request: N8nReadonlyRequest & {
+    action: "listWorkflows" | "getWorkflow" | "testConnection";
+    cursor?: string | null;
+    workflowId?: string;
+  }): Promise<unknown> {
+    const response = await fetchLike("/api/n8n/readonly", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        action: request.action,
+        connection: {
+          baseUrl: request.connection.baseUrl,
+          authHeaderName: request.connection.authHeaderName
+        },
+        apiKey: request.apiKey,
+        ...(request.workflowId ? { workflowId: request.workflowId } : {}),
+        ...(request.cursor ? { cursor: request.cursor } : {})
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error(`n8n read-only proxy request failed with ${response.status}.`);
+    }
+
     return response.json() as Promise<unknown>;
   }
 }

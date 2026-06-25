@@ -55,7 +55,7 @@ function parseNodes(value: unknown): NodeIR[] {
       name,
       type,
       typeFamily: type.startsWith(KNOWN_N8N_TYPE_PREFIX) ? "known" : "unknown",
-      parameters: summarizeParameters(node.parameters)
+      parameters: summarizeParameters(node.parameters, type)
     };
 
     const credentialSummary = summarizeCredentials(node.credentials);
@@ -114,12 +114,31 @@ function parseEdges(value: unknown, nodes: NodeIR[]): EdgeIR[] {
   return edges;
 }
 
-function summarizeParameters(value: unknown): NodeParameterSummary[] {
+function summarizeParameters(value: unknown, nodeType: string): NodeParameterSummary[] {
   if (!isRecord(value)) {
     return [];
   }
 
-  return Object.entries(value).map(([key, parameterValue]) => createParameterSummary(key, parameterValue));
+  return Object.entries(value).map(([key, parameterValue]) => {
+    if (isWebhookNodeType(nodeType) && isWebhookPathLikeParameterKey(key)) {
+      return {
+        ...createParameterSummary("webhookPath", parameterValue),
+        key
+      };
+    }
+
+    return createParameterSummary(key, parameterValue);
+  });
+}
+
+function isWebhookNodeType(nodeType: string): boolean {
+  return nodeType === "n8n-nodes-base.webhook" || nodeType === "n8n-nodes-base.webhookTrigger";
+}
+
+function isWebhookPathLikeParameterKey(key: string): boolean {
+  return ["path", "url", "webhookpath", "webhookid", "webhookurl", "testurl", "productionurl"].includes(
+    key.toLowerCase()
+  );
 }
 
 function summarizeCredentials(value: unknown): CredentialReferenceSummary {

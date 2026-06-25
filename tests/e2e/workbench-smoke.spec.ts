@@ -1,11 +1,11 @@
 import { expect, test } from "@playwright/test";
 import path from "node:path";
 
-test("workbench supports the deterministic v0.4.4 review packet demo flow", async ({ page }) => {
+test("workbench supports the deterministic v0.5.1 review packet demo flow", async ({ page }) => {
   test.setTimeout(60000);
   await page.goto("/");
 
-  await expect(page.getByText("OpenWorkflowDoctor v0.4.4").first()).toBeVisible();
+  await expect(page.getByText("OpenWorkflowDoctor v0.5.1").first()).toBeVisible();
   await expect(page.getByRole("heading", { name: "本地静态审查导出的 n8n JSON" })).toBeVisible();
   const welcomeChecklist = page.getByRole("region", { name: "本次审查会产出" });
   await expect(welcomeChecklist).toBeVisible();
@@ -255,21 +255,33 @@ test("workbench imports two workflows and restores state when switching", async 
 });
 
 test("workbench imports a workflow from read-only n8n and runs Doctor", async ({ page }) => {
-  await page.route("https://mock-n8n.example.test/api/v1/workflows**", async (route) => {
-    const requestUrl = new URL(route.request().url());
-    expect(route.request().method()).toBe("GET");
-    expect(route.request().headers()["x-n8n-api-key"]).toBe("n8n-session-key");
-    expect(requestUrl.searchParams.get("excludePinnedData")).toBe("true");
+  let workflowFetchCount = 0;
+  await page.route("**/api/n8n/readonly", async (route) => {
+    const body = route.request().postDataJSON() as {
+      action: string;
+      connection: { baseUrl: string; authHeaderName: string };
+      apiKey: string;
+      workflowId?: string;
+    };
+    expect(route.request().method()).toBe("POST");
+    expect(body.connection).toEqual({
+      baseUrl: "https://mock-n8n.example.test/api/v1",
+      authHeaderName: "X-N8N-API-KEY"
+    });
+    expect(body.apiKey).toBe("n8n-session-key");
+    expect(JSON.stringify(body)).not.toContain("credentials");
+    expect(JSON.stringify(body)).not.toContain("executions");
 
-    if (requestUrl.pathname.endsWith("/workflows/wf_readonly")) {
+    if (body.action === "getWorkflow" && body.workflowId === "wf_readonly") {
+      workflowFetchCount += 1;
       await route.fulfill({
         contentType: "application/json",
         body: JSON.stringify({
           id: "wf_readonly",
           name: "Read-only Refund Workflow",
           active: true,
-          updatedAt: "2026-06-25T02:00:00.000Z",
-          versionId: "version-readonly",
+          updatedAt: workflowFetchCount === 1 ? "2026-06-25T02:00:00.000Z" : "2026-06-25T03:00:00.000Z",
+          versionId: workflowFetchCount === 1 ? "version-readonly" : "version-readonly-updated",
           pinData: {
             Webhook: [{ json: { secret: "pinned-secret" } }]
           },
@@ -285,7 +297,7 @@ test("workbench imports a workflow from read-only n8n and runs Doctor", async ({
                 }
               },
               parameters: {
-                path: "refund",
+                path: "secret-webhook-path",
                 webhookUrl: "https://mock-n8n.example.test/webhook/secret"
               }
             },
@@ -296,7 +308,17 @@ test("workbench imports a workflow from read-only n8n and runs Doctor", async ({
               parameters: {
                 operation: "refund"
               }
-            }
+            },
+            ...(workflowFetchCount > 1
+              ? [
+                  {
+                    id: "audit",
+                    name: "Audit Log",
+                    type: "n8n-nodes-base.noOp",
+                    parameters: {}
+                  }
+                ]
+              : [])
           ],
           connections: {
             Webhook: {
@@ -309,6 +331,7 @@ test("workbench imports a workflow from read-only n8n and runs Doctor", async ({
       return;
     }
 
+    expect(body.action).toBe("listWorkflows");
     await route.fulfill({
       contentType: "application/json",
       body: JSON.stringify({
@@ -353,7 +376,11 @@ test("workbench imports a workflow from read-only n8n and runs Doctor", async ({
   await expect(page.getByText("cred_should_not_leak")).toHaveCount(0);
   await expect(page.getByText("Production Header")).toHaveCount(0);
   await expect(page.getByText("pinned-secret")).toHaveCount(0);
+  await expect(page.getByText("secret-webhook-path")).toHaveCount(0);
 
   await reviewSteps.locator(".primary-action").click();
   await expect(page.getByRole("region", { name: "Review Console" }).getByText("Webhook has no dedupe guard")).toBeVisible();
+
+  await reviewSteps.getByRole("button", { name: "刷新 n8n" }).click();
+  await expect(reviewSteps.getByText(/previous upstream version/)).toBeVisible();
 });

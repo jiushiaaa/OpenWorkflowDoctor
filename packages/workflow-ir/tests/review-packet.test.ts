@@ -118,6 +118,39 @@ describe("createDoctorReviewPacket", () => {
     expect(serialized).not.toContain("query-api-secret");
   });
 
+  test("does not leak n8n webhook path-like values into exported packets", () => {
+    const report = createDoctorReport(
+      {
+        name: "Webhook Secret Workflow",
+        nodes: [
+          {
+            id: "webhook",
+            name: "Webhook Trigger",
+            type: "n8n-nodes-base.webhook",
+            webhookId: "secret-webhook-id",
+            parameters: {
+              path: "secret-webhook-path",
+              webhookUrl: "https://n8n.example.test/webhook/secret-webhook-url",
+              testUrl: "https://n8n.example.test/webhook-test/secret-test-url",
+              productionUrl: "https://n8n.example.test/webhook/secret-production-url"
+            }
+          }
+        ],
+        connections: {}
+      },
+      "检查 webhook"
+    );
+    const packet = createDoctorReviewPacket(report, "2026-06-23T00:00:00.000Z");
+    const serialized = JSON.stringify(packet);
+
+    expect(serialized).toContain("[redacted]");
+    expect(serialized).not.toContain("secret-webhook-id");
+    expect(serialized).not.toContain("secret-webhook-path");
+    expect(serialized).not.toContain("secret-webhook-url");
+    expect(serialized).not.toContain("secret-test-url");
+    expect(serialized).not.toContain("secret-production-url");
+  });
+
   test("does not leak sensitive patch operation payloads into exported packets", () => {
     const workflow = parseN8nWorkflow(branchWorkflow);
     const baseReport = createDoctorReport(branchWorkflow, "检查风险");

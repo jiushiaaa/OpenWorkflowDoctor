@@ -4,7 +4,7 @@ export const DEFAULT_LANGUAGE: Language = "zh-CN";
 
 export const dictionaries = {
   "zh-CN": {
-    "app.version": "OpenWorkflowDoctor v0.4.4",
+    "app.version": "OpenWorkflowDoctor v0.5.1",
     "toolbar.commandPalette": "命令面板",
     "toolbar.settings": "设置",
     "toolbar.metrics.nodes": "节点",
@@ -82,6 +82,8 @@ export const dictionaries = {
     "explorer.empty": "还没有导入工作流。导入 JSON 或加载示例以开始。",
     "explorer.samples": "示例工作流",
     "explorer.n8nReadonly": "只读 n8n 来源",
+    "explorer.localReviewCopy": "Imported as local review copy",
+    "explorer.refreshMarksStale": "Refresh marks existing reports stale when upstream changes",
     "explorer.importedOnly": "已导入，未诊断",
     "explorer.diagnosed": "已诊断",
     "explorer.patchPreview": "已有补丁预览",
@@ -278,14 +280,14 @@ export const dictionaries = {
     "severity.high": "高",
     "severity.critical": "严重",
     "n8nImport.warningTitle": "只读导入边界",
-    "n8nImport.warningBody": "OpenWorkflowDoctor 不会修改 n8n，不会执行工作流，不会读取凭据，不会触发 webhook。Patch Preview does not write back.",
+    "n8nImport.warningBody": "OpenWorkflowDoctor 不会修改 n8n，不会执行工作流，不会读取凭据，不会触发 webhook。Patch Preview does not write back to n8n. Refresh marks existing reports stale when upstream changes.",
     "n8nImport.connection": "连接",
     "n8nImport.workflowList": "工作流列表",
     "n8nImport.active": "Active",
     "n8nImport.inactive": "Inactive"
   },
   "en-US": {
-    "app.version": "OpenWorkflowDoctor v0.4.4",
+    "app.version": "OpenWorkflowDoctor v0.5.1",
     "toolbar.commandPalette": "Command Palette",
     "toolbar.settings": "Settings",
     "toolbar.metrics.nodes": "Nodes",
@@ -363,6 +365,8 @@ export const dictionaries = {
     "explorer.empty": "No workflows imported yet. Import JSON or load a sample to start.",
     "explorer.samples": "Sample workflows",
     "explorer.n8nReadonly": "Read-only n8n source",
+    "explorer.localReviewCopy": "Imported as local review copy",
+    "explorer.refreshMarksStale": "Refresh marks existing reports stale when upstream changes",
     "explorer.importedOnly": "Imported, not diagnosed",
     "explorer.diagnosed": "Diagnosed",
     "explorer.patchPreview": "Patch preview ready",
@@ -559,7 +563,7 @@ export const dictionaries = {
     "severity.high": "High",
     "severity.critical": "Critical",
     "n8nImport.warningTitle": "Read-only import boundary",
-    "n8nImport.warningBody": "OpenWorkflowDoctor will not modify n8n, execute workflows, read credentials, or trigger webhooks. Patch Preview does not write back.",
+    "n8nImport.warningBody": "OpenWorkflowDoctor will not modify n8n, execute workflows, read credentials, or trigger webhooks. Patch Preview does not write back to n8n. Refresh marks existing reports stale when upstream changes.",
     "n8nImport.connection": "Connection",
     "n8nImport.workflowList": "Workflow list",
     "n8nImport.active": "Active",

@@ -94,4 +94,41 @@ describe("createN8nReadonlyClient", () => {
     ).rejects.toThrow("Invalid n8n workflow id.");
     expect(calls).toEqual([]);
   });
+
+  test("can route list, get, and test requests through the local read-only proxy", async () => {
+    const { calls, fetchStub } = createFetchStub([
+      {
+        data: [{ id: "wf_1", name: "First", active: true }],
+        nextCursor: null
+      },
+      { id: "wf_1", name: "Selected", nodes: [], connections: {} },
+      { ok: true, status: 200 }
+    ]);
+    const client = createN8nReadonlyClient(fetchStub, { transport: "proxy" });
+
+    await expect(client.listWorkflows({ connection, apiKey: "n8n_secret" })).resolves.toHaveLength(1);
+    await expect(client.getWorkflow({ connection, apiKey: "n8n_secret", workflowId: "wf_1" })).resolves.toMatchObject({
+      id: "wf_1"
+    });
+    await expect(client.testConnection({ connection, apiKey: "n8n_secret" })).resolves.toEqual({
+      ok: true,
+      status: 200
+    });
+
+    expect(calls.map((call) => call.url)).toEqual([
+      "/api/n8n/readonly",
+      "/api/n8n/readonly",
+      "/api/n8n/readonly"
+    ]);
+    expect(calls.map((call) => call.init?.method)).toEqual(["POST", "POST", "POST"]);
+    expect(calls.map((call) => JSON.parse(String(call.init?.body)) as { action: string })).toMatchObject([
+      { action: "listWorkflows" },
+      { action: "getWorkflow" },
+      { action: "testConnection" }
+    ]);
+    expect(JSON.stringify(calls)).not.toContain("credentials");
+    expect(JSON.stringify(calls)).not.toContain("executions");
+    expect(JSON.stringify(calls)).not.toContain("activate");
+    expect(JSON.stringify(calls)).not.toContain("deactivate");
+  });
 });

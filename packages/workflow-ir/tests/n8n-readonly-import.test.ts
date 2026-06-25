@@ -31,7 +31,9 @@ describe("importN8nReadonlyWorkflow", () => {
             }
           },
           parameters: {
-            path: "refunds",
+            path: "secret-webhook-path",
+            testUrl: "https://n8n.example.test/webhook-test/secret-test-url",
+            productionUrl: "https://n8n.example.test/webhook/secret-production-url",
             webhookUrl: "https://n8n.example.test/webhook/secret-webhook-url",
             url: "https://api.example.test/orders?customer=cus_123"
           }
@@ -88,10 +90,23 @@ describe("importN8nReadonlyWorkflow", () => {
     expect(serialized).not.toContain("cred_custom");
     expect(serialized).not.toContain("Custom API Key");
     expect(serialized).not.toContain("webhook-secret-id");
+    expect(serialized).not.toContain("secret-webhook-path");
+    expect(serialized).not.toContain("secret-test-url");
+    expect(serialized).not.toContain("secret-production-url");
     expect(serialized).not.toContain("secret-webhook-url");
     expect(serialized).not.toContain("pinned-secret");
     expect(serialized).not.toContain("static-secret");
     expect(serialized).not.toContain("execution-secret");
+
+    const webhookParameters = imported.workflow.nodes.find((node) => node.id === "webhook")?.parameters ?? [];
+    expect(webhookParameters).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ key: "path", preview: "[redacted]", redacted: true }),
+        expect.objectContaining({ key: "testUrl", preview: "[redacted]", redacted: true }),
+        expect.objectContaining({ key: "productionUrl", preview: "[redacted]", redacted: true }),
+        expect.objectContaining({ key: "webhookUrl", preview: "[redacted]", redacted: true })
+      ])
+    );
   });
 
   test("extracts safe tag names from n8n workflow metadata", () => {

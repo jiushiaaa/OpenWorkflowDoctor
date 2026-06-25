@@ -295,6 +295,54 @@ describe("local workspace repository", () => {
     ).toThrow("Invalid WorkflowDocument.");
   });
 
+  test("does not serialize n8n webhook path-like values in workflow documents or review packet artifacts", () => {
+    const workflow = parseN8nWorkflow({
+      name: "Webhook Secret Workflow",
+      nodes: [
+        {
+          id: "webhook",
+          name: "Webhook Trigger",
+          type: "n8n-nodes-base.webhook",
+          webhookId: "secret-webhook-id",
+          parameters: {
+            path: "secret-webhook-path",
+            webhookUrl: "https://n8n.example.test/webhook/secret-webhook-url",
+            testUrl: "https://n8n.example.test/webhook-test/secret-test-url",
+            productionUrl: "https://n8n.example.test/webhook/secret-production-url"
+          }
+        }
+      ],
+      connections: {}
+    });
+    const document = createWorkflowDocumentFromWorkflowIr({
+      workflow,
+      sourceKind: "n8n-readonly",
+      sourceLabel: "Production n8n",
+      readOnlySource: {
+        provider: "n8n",
+        connectionId: "conn_prod",
+        connectionLabel: "Production n8n",
+        baseUrlOrigin: "https://prod.example.test",
+        externalWorkflowId: "webhook-secret-workflow",
+        importedAt: "2026-06-25T03:00:00.000Z",
+        lastFetchedAt: "2026-06-25T03:00:00.000Z"
+      }
+    });
+    const packet = createDoctorReviewPacket(createDoctorReportFromWorkflow(workflow, document.currentRequest));
+    const artifact = createReviewPacketArtifact({
+      workflowDocumentId: document.id,
+      packet
+    });
+    const serialized = JSON.stringify({ document, artifact });
+
+    expect(serialized).toContain("[redacted]");
+    expect(serialized).not.toContain("secret-webhook-id");
+    expect(serialized).not.toContain("secret-webhook-path");
+    expect(serialized).not.toContain("secret-webhook-url");
+    expect(serialized).not.toContain("secret-test-url");
+    expect(serialized).not.toContain("secret-production-url");
+  });
+
   test("persists AI patch proposal state per workflow without leaking raw model or provider data", async () => {
     const repository = createMemoryWorkspaceRepository();
     await repository.initialize();

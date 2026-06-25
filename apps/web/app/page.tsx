@@ -75,7 +75,7 @@ export default function Home() {
   const t = useMemo(() => createTranslator(settings.language), [settings.language]);
   const aiProviderStatus = getAiProviderStatus(settings.ai);
   const resolvedTheme = settings.theme === "system" ? systemTheme : settings.theme;
-  const n8nClient = useMemo(() => createN8nReadonlyClient(), []);
+  const n8nClient = useMemo(() => createN8nReadonlyClient(fetch, { transport: "proxy" }), []);
 
   const workspace = useWorkspaceController({
     onWorkspaceChanged: () => resetAiExplainerRef.current()

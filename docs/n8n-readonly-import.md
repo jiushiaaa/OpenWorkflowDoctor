@@ -1,6 +1,6 @@
 # v0.5 Read-only n8n Import
 
-OpenWorkflowDoctor v0.5 adds an optional way to import existing workflows directly from an n8n instance. This is an import source only. It does not turn OpenWorkflowDoctor into a workflow runtime, workflow builder, production connector, or write-back tool.
+OpenWorkflowDoctor v0.5 adds an optional way to import existing workflows directly from an n8n instance. v0.5.1 hardens that path for real n8n testing by routing reads through a local allowlist proxy to avoid common browser CORS failures. This is an import source only. It does not turn OpenWorkflowDoctor into a workflow runtime, workflow builder, production connector, or write-back tool.
 
 ## Trust Model
 
@@ -16,19 +16,25 @@ All review behavior remains local and review-only. Imported n8n workflows become
 
 ## Allowed API Calls
 
-The v0.5 client exposes only three methods:
+The client exposes only three methods:
 
 - `testConnection`
 - `listWorkflows`
 - `getWorkflow`
 
-The only n8n endpoints used are:
+The only n8n endpoints used by the server-side proxy are:
 
 - `GET /api/v1/workflows?limit=1&excludePinnedData=true`
 - `GET /api/v1/workflows?excludePinnedData=true`
 - `GET /api/v1/workflows/{id}?excludePinnedData=true`
 
-`X-N8N-API-KEY` is the only auth header sent by default.
+`X-N8N-API-KEY` is the only auth header sent to n8n by default.
+
+The browser calls only the local proxy route:
+
+- `POST /api/n8n/readonly`
+
+The proxy does not accept arbitrary methods or arbitrary paths. It derives the upstream n8n URL from an explicit action and forces `excludePinnedData=true`.
 
 ## Forbidden API Calls
 
@@ -37,7 +43,7 @@ v0.5 must not call:
 - workflow create, update, delete, archive, unarchive, activate, deactivate, transfer, or tag update endpoints
 - execution list, read, retry, stop, or delete endpoints
 - credential list, read, schema, test, create, update, delete, or transfer endpoints
-- webhook URLs discovered in workflow data
+- webhook URLs, ids, paths, test URLs, or production URLs discovered in workflow data
 - variables, users, source-control, audit, package, data-table, or private `/rest/*` endpoints
 
 OpenWorkflowDoctor also does not export n8n-importable patch JSON. Patch Preview remains a local `WorkflowIR` preview only.
@@ -76,7 +82,7 @@ Excluded or redacted data includes:
 - pinned data
 - static data
 - execution data
-- webhook ids and webhook URLs
+- webhook ids, webhook paths, webhook URLs, test URLs, and production URLs
 - sampled or binary payloads
 
 Credential references are represented only as safe node metadata:
@@ -103,9 +109,15 @@ n8n API keys may have broad permissions depending on the n8n plan and key scopes
 
 Read-only import does not guarantee runtime safety. It only gives the existing OpenWorkflowDoctor review pipeline a safer, faster way to obtain workflow definitions.
 
+The local proxy means the OpenWorkflowDoctor server temporarily handles the session API key while forwarding read-only requests. The key is not logged or persisted server-side, and browser storage rules remain unchanged.
+
+## Real n8n Smoke Test
+
+Before a public launch or social post, run the manual smoke checklist in [Real n8n Import Smoke Test](real-n8n-import-smoke-test.md).
+
 ## v0.6+ Candidates
 
-These remain out of scope for v0.5:
+These remain out of scope for v0.5/v0.5.1:
 
 - write-back to n8n
 - workflow execution or test execution

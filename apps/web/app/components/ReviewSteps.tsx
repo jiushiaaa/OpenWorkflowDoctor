@@ -96,7 +96,8 @@ export function ReviewSteps({
           <div className="source-badge">
             <strong>{t("explorer.n8nReadonly")}</strong>
             <span>{sourceLabel}</span>
-            <span>Imported as local review copy</span>
+            <span>{t("explorer.localReviewCopy")}</span>
+            <span>{t("explorer.refreshMarksStale")}</span>
           </div>
         ) : null}
         {!workflowInput ? (
