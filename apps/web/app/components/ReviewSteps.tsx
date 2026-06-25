@@ -27,14 +27,18 @@ export function ReviewSteps({
   isReportStale,
   error,
   humanDecision,
+  sourceKind,
+  sourceLabel,
   t,
   onImportFile,
   onImportClick,
+  onImportN8nClick,
   onLoadSample,
   onSelectWorkflow,
   onPrimaryAction,
   onRequestChange,
-  onRunDoctor
+  onRunDoctor,
+  onRefreshN8n
 }: {
   fileInputRef: RefObject<HTMLInputElement | null>;
   workflows: WorkflowExplorerItem[];
@@ -51,14 +55,18 @@ export function ReviewSteps({
   isReportStale: boolean;
   error: string | null;
   humanDecision: HumanReviewDecision;
+  sourceKind?: string | undefined;
+  sourceLabel?: string | undefined;
   t: Translator;
   onImportFile: (file: File | undefined) => void;
   onImportClick: () => void;
+  onImportN8nClick: () => void;
   onLoadSample: (sample: SampleWorkflowCatalogItem) => void;
   onSelectWorkflow: (workflowDocumentId: string) => void;
   onPrimaryAction: () => void;
   onRequestChange: (request: string) => void;
   onRunDoctor: () => void;
+  onRefreshN8n: () => void;
 }) {
   return (
     <aside className="review-steps" aria-label={t("sidebar.reviewSteps")}>
@@ -74,6 +82,7 @@ export function ReviewSteps({
         samples={samples}
         t={t}
         onImportClick={onImportClick}
+        onImportN8nClick={onImportN8nClick}
         onLoadSample={onLoadSample}
         onSelectWorkflow={onSelectWorkflow}
       />
@@ -83,6 +92,13 @@ export function ReviewSteps({
         <h2>{t("sidebar.reviewTarget")}</h2>
         <span>{t("sidebar.workflowName")}</span>
         <h1>{workflowInput?.name ?? (workspaceLoaded ? "OpenWorkflowDoctor" : t("workspace.loading"))}</h1>
+        {sourceKind === "n8n-readonly" ? (
+          <div className="source-badge">
+            <strong>{t("explorer.n8nReadonly")}</strong>
+            <span>{sourceLabel}</span>
+            <span>Imported as local review copy</span>
+          </div>
+        ) : null}
         {!workflowInput ? (
           <p className="side-copy">
             {t("sidebar.localStaticCopy")}
@@ -97,6 +113,11 @@ export function ReviewSteps({
           value={reviewTargetFingerprint ?? t("sidebar.fingerprintPending")}
         />
         <KeyValue label={t("sidebar.packetExportStatus")} value={packetExportStatus} />
+        {sourceKind === "n8n-readonly" ? (
+          <button type="button" className="secondary-button" onClick={onRefreshN8n}>
+            {t("actions.refreshN8n")}
+          </button>
+        ) : null}
       </section>
 
       <button type="button" className="primary-action" onClick={onPrimaryAction}>
@@ -120,7 +141,11 @@ export function ReviewSteps({
             value={request}
             onChange={(event) => onRequestChange(event.target.value)}
           />
-          {isReportStale ? <p className="review-warning">{t("workspace.reportStale")}</p> : null}
+          {isReportStale ? (
+            <p className="review-warning">
+              {sourceKind === "n8n-readonly" ? t("workspace.n8nReportStale") : t("workspace.reportStale")}
+            </p>
+          ) : null}
           <button type="button" onClick={onRunDoctor}>
             {t("actions.runDoctor")}
           </button>

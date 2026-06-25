@@ -4,7 +4,10 @@ import type { SampleWorkflowCatalogItem } from "../lib/sample-workflows";
 import {
   createIndexedDbWorkspaceRepository,
   createWorkflowDocumentFromWorkflowIr,
+  refreshN8nReadonlyWorkflowDocument,
   type ReviewPacketArtifact,
+  type N8nReadonlyRefreshInput,
+  type N8nReadOnlySourceMetadata,
   type WorkflowDocument,
   type WorkspaceRepository
 } from "../lib/workspace-store";
@@ -119,6 +122,62 @@ export function useWorkspaceController({ onWorkspaceChanged }: { onWorkspaceChan
     }
   }, [loadWorkspaceSnapshot, onWorkspaceChanged]);
 
+  const importN8nReadonlyWorkflow = useCallback(async ({
+    workflow,
+    sourceLabel,
+    readOnlySource
+  }: {
+    workflow: ReturnType<typeof parseN8nWorkflow>;
+    sourceLabel: string;
+    readOnlySource: N8nReadOnlySourceMetadata;
+  }) => {
+    try {
+      const repository = repositoryRef.current;
+      if (!repository) {
+        throw new Error("Local workspace storage is not ready.");
+      }
+
+      const document = createWorkflowDocumentFromWorkflowIr({
+        workflow,
+        sourceKind: "n8n-readonly",
+        sourceLabel,
+        readOnlySource
+      });
+
+      await repository.saveWorkflowDocument(document);
+      await repository.setActiveWorkflowDocument(document.id);
+      await loadWorkspaceSnapshot(document.id);
+      onWorkspaceChanged();
+      setError(null);
+    } catch (importError) {
+      setError(importError instanceof Error ? importError.message : "Unable to import workflow from n8n.");
+    }
+  }, [loadWorkspaceSnapshot, onWorkspaceChanged]);
+
+  const refreshN8nReadonlyDocument = useCallback(async (input: Omit<N8nReadonlyRefreshInput, "document">) => {
+    if (!activeDocument) {
+      return;
+    }
+
+    try {
+      const repository = repositoryRef.current;
+      if (!repository) {
+        throw new Error("Local workspace storage is not ready.");
+      }
+
+      const refreshed = refreshN8nReadonlyWorkflowDocument({
+        ...input,
+        document: activeDocument
+      });
+      await repository.saveWorkflowDocument(refreshed);
+      await loadWorkspaceSnapshot(refreshed.id);
+      onWorkspaceChanged();
+      setError(null);
+    } catch (refreshError) {
+      setError(refreshError instanceof Error ? refreshError.message : "Unable to refresh workflow from n8n.");
+    }
+  }, [activeDocument, loadWorkspaceSnapshot, onWorkspaceChanged]);
+
   const selectWorkflowDocument = useCallback(async (workflowDocumentId: string) => {
     const repository = repositoryRef.current;
     if (!repository) {
@@ -203,6 +262,8 @@ export function useWorkspaceController({ onWorkspaceChanged }: { onWorkspaceChan
     loadWorkspaceSnapshot,
     updateActiveDocument,
     importWorkflow,
+    importN8nReadonlyWorkflow,
+    refreshN8nReadonlyDocument,
     loadSampleWorkflow,
     selectWorkflowDocument,
     saveReviewPacketArtifact,

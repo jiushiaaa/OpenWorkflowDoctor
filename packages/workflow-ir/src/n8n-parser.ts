@@ -1,11 +1,12 @@
 import { createParameterSummary } from "./redaction.js";
-import type { EdgeIR, NodeIR, NodeParameterSummary, WorkflowIR } from "./types.js";
+import type { CredentialReferenceSummary, EdgeIR, NodeIR, NodeParameterSummary, WorkflowIR } from "./types.js";
 
 type N8nNode = {
   id?: unknown;
   name?: unknown;
   type?: unknown;
   parameters?: unknown;
+  credentials?: unknown;
 };
 
 type N8nConnectionTarget = {
@@ -49,13 +50,20 @@ function parseNodes(value: unknown): NodeIR[] {
         : createUniqueFallbackId(slugify(name, index), fallbackIdCounts);
     const type = typeof node.type === "string" && node.type.trim() ? node.type : "unknown";
 
-    return {
+    const parsedNode: NodeIR = {
       id,
       name,
       type,
       typeFamily: type.startsWith(KNOWN_N8N_TYPE_PREFIX) ? "known" : "unknown",
       parameters: summarizeParameters(node.parameters)
     };
+
+    const credentialSummary = summarizeCredentials(node.credentials);
+    if (credentialSummary.credentialReferencePresent) {
+      parsedNode.credentialSummary = credentialSummary;
+    }
+
+    return parsedNode;
   });
 }
 
@@ -112,6 +120,28 @@ function summarizeParameters(value: unknown): NodeParameterSummary[] {
   }
 
   return Object.entries(value).map(([key, parameterValue]) => createParameterSummary(key, parameterValue));
+}
+
+function summarizeCredentials(value: unknown): CredentialReferenceSummary {
+  if (!isRecord(value)) {
+    return {
+      credentialReferencePresent: false,
+      credentialTypes: [],
+      credentialCount: 0
+    };
+  }
+
+  const credentialTypes = Object.entries(value)
+    .filter(([, credentialReference]) => isRecord(credentialReference))
+    .map(([credentialType]) => credentialType)
+    .filter((credentialType) => credentialType.trim().length > 0)
+    .sort();
+
+  return {
+    credentialReferencePresent: credentialTypes.length > 0,
+    credentialTypes,
+    credentialCount: credentialTypes.length
+  };
 }
 
 function slugify(value: string, index: number): string {

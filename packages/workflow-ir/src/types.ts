@@ -21,12 +21,19 @@ export type NodeParameterSummary = {
   redacted?: boolean;
 };
 
+export type CredentialReferenceSummary = {
+  credentialReferencePresent: boolean;
+  credentialTypes: string[];
+  credentialCount: number;
+};
+
 export type NodeIR = {
   id: string;
   name: string;
   type: string;
   typeFamily: NodeTypeFamily;
   parameters: NodeParameterSummary[];
+  credentialSummary?: CredentialReferenceSummary;
 };
 
 export type EdgeIR = {

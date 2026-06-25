@@ -6,6 +6,7 @@ import {
   type ThemeMode,
   type WorkbenchSettings
 } from "../lib/settings";
+import type { N8nConnectionSettings, SaveN8nConnectionInput } from "../lib/n8n-connections";
 import { getSettingsTestStatusLabel, KeyValue, type SettingsTestStatus } from "./workbench-shared";
 
 const providerPresets = listProviderPresets();
@@ -16,8 +17,16 @@ export function SettingsModal({
   testStatus,
   t,
   onSettingsChange,
+  n8nConnections,
+  n8nDraft,
+  n8nApiKey,
   onTestConnection,
   onClearCredentials,
+  onN8nDraftChange,
+  onN8nApiKeyChange,
+  onSaveN8nConnection,
+  onDeleteN8nConnection,
+  onClearN8nSessionKey,
   onClearWorkspaceData,
   onClose
 }: {
@@ -26,8 +35,16 @@ export function SettingsModal({
   testStatus: SettingsTestStatus;
   t: Translator;
   onSettingsChange: (updater: (current: WorkbenchSettings) => WorkbenchSettings) => void;
+  n8nConnections: N8nConnectionSettings[];
+  n8nDraft: SaveN8nConnectionInput;
+  n8nApiKey: string;
   onTestConnection: () => void;
   onClearCredentials: () => void;
+  onN8nDraftChange: (draft: SaveN8nConnectionInput) => void;
+  onN8nApiKeyChange: (apiKey: string) => void;
+  onSaveN8nConnection: () => void;
+  onDeleteN8nConnection: (connectionId: string) => void;
+  onClearN8nSessionKey: (connectionId: string) => void;
   onClearWorkspaceData: () => void;
   onClose: () => void;
 }) {
@@ -228,6 +245,86 @@ export function SettingsModal({
               </button>
             </div>
             <p className="settings-help">{getSettingsTestStatusLabel(testStatus, t)}</p>
+          </section>
+
+          <section className="settings-section">
+            <h3>{t("settings.n8nConnections")}</h3>
+            <p className="settings-help">{t("settings.n8nReadOnlyHelp")}</p>
+            <label>
+              <span>{t("settings.n8nLabel")}</span>
+              <input
+                aria-label={t("settings.n8nLabel")}
+                value={n8nDraft.label}
+                onChange={(event) => onN8nDraftChange({ ...n8nDraft, label: event.target.value })}
+              />
+            </label>
+            <label>
+              <span>{t("settings.n8nBaseUrl")}</span>
+              <input
+                aria-label={t("settings.n8nBaseUrl")}
+                value={n8nDraft.baseUrl}
+                onChange={(event) => onN8nDraftChange({ ...n8nDraft, baseUrl: event.target.value })}
+              />
+            </label>
+            <label>
+              <span>{t("settings.n8nEnvironment")}</span>
+              <input
+                aria-label={t("settings.n8nEnvironment")}
+                value={n8nDraft.environmentLabel ?? ""}
+                onChange={(event) => onN8nDraftChange({ ...n8nDraft, environmentLabel: event.target.value })}
+              />
+            </label>
+            <label>
+              <span>{t("settings.n8nApiKey")}</span>
+              <input
+                aria-label={t("settings.n8nApiKey")}
+                type="password"
+                autoComplete="off"
+                value={n8nApiKey}
+                onChange={(event) => onN8nApiKeyChange(event.target.value)}
+              />
+            </label>
+            <p className="settings-help">{t("settings.n8nKeySessionOnly")}</p>
+            <div className="settings-actions">
+              <button type="button" onClick={onSaveN8nConnection}>
+                {t("actions.saveN8nConnection")}
+              </button>
+            </div>
+
+            {n8nConnections.length > 0 ? (
+              <ul className="connection-list">
+                {n8nConnections.map((connection) => (
+                  <li key={connection.connectionId}>
+                    <div>
+                      <strong>{connection.label}</strong>
+                      <small>
+                        {connection.baseUrl}
+                        {connection.environmentLabel ? ` · ${connection.environmentLabel}` : ""}
+                      </small>
+                      <small>{t("settings.n8nStatus")}: {connection.lastConnectionStatus}</small>
+                    </div>
+                    <div className="settings-actions">
+                      <button
+                        type="button"
+                        className="secondary-button"
+                        onClick={() => onClearN8nSessionKey(connection.connectionId)}
+                      >
+                        {t("actions.clearSessionKey")}
+                      </button>
+                      <button
+                        type="button"
+                        className="secondary-button"
+                        onClick={() => onDeleteN8nConnection(connection.connectionId)}
+                      >
+                        {t("actions.deleteConnection")}
+                      </button>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="settings-help">{t("settings.n8nNoConnections")}</p>
+            )}
           </section>
 
           <section className="settings-section">

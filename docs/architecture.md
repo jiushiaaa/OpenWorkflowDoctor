@@ -1,6 +1,46 @@
 # OpenWorkflowDoctor Architecture
 
-OpenWorkflowDoctor is a Workflow Reliability IDE for existing n8n workflows. The MVP reads exported workflow JSON, converts it into a deterministic `WorkflowIR`, detects static risks, proposes structured patches, and verifies whether changes are safe to accept. It does not connect to production n8n, execute workflows, read credentials, or trigger external side effects.
+OpenWorkflowDoctor is a Workflow Reliability IDE for existing n8n workflows. The MVP reads exported workflow JSON or optional read-only n8n workflow definitions, converts them into deterministic `WorkflowIR`, detects static risks, proposes structured patches, and verifies whether changes are safe to accept. It does not execute workflows, read credentials, write back to n8n, or trigger external side effects.
+
+## v0.5 Read-only n8n Import Boundary
+
+v0.5 adds a read-only n8n import source while preserving the existing local review boundary. It is not a production mutation integration. It only helps users choose an existing workflow from n8n instead of manually exporting JSON.
+
+The allowed data flow is:
+
+```text
+n8n workflow list/get response
+  -> importN8nReadonlyWorkflow
+  -> secret-safe WorkflowIR
+  -> WorkflowDocument sourceKind: n8n-readonly
+  -> existing Doctor report, PatchOperation preview, verifier, and Review Packet flow
+```
+
+The web client exposes only `testConnection`, `listWorkflows`, and `getWorkflow`. The allowed endpoints are `GET /workflows?excludePinnedData=true`, `GET /workflows?limit=1&excludePinnedData=true`, and `GET /workflows/{id}?excludePinnedData=true`. No generic n8n request helper is exposed to the UI.
+
+n8n connection metadata is stored separately from workflow documents. Local storage may contain the connection id, label, normalized API root, environment label, auth header name, timestamps, and connection status. The n8n API key is session-only by default and is not stored in IndexedDB, WorkflowIR, Review Packets, Review Packet Artifacts, or Workflow Documents.
+
+Imported n8n workflow documents store only source metadata:
+
+- external workflow id
+- connection id and label
+- optional environment label
+- base URL origin
+- imported and last-fetched timestamps
+- upstream updated/version/active/tag metadata
+
+Credential references are summarized on nodes as safe presence metadata: credential reference present, credential types, and count. Credential ids, credential names, pinned data, static data, execution data, webhook ids, webhook URLs, sampled payloads, and binary payloads are excluded or redacted before persistence.
+
+Manual refresh fetches the upstream workflow again and converts it through the same adapter. If the source WorkflowIR changed, existing Doctor reports and AI Patch Proposals are marked stale and the user must rerun Doctor. Refresh never writes back to n8n.
+
+Forbidden in v0.5:
+
+- workflow create, update, delete, archive, unarchive, activate, deactivate, transfer, or tag update
+- execution list/read/retry/stop/delete
+- credential list/read/schema/test/create/update/delete/transfer
+- webhook triggering
+- n8n-importable patch export
+- cloud sync, team auth, or OAuth
 
 ## v0.3 Local Workspace Boundary
 

@@ -1,14 +1,14 @@
 # OpenWorkflowDoctor
 
-Local-first Workflow Review IDE for exported n8n workflows.
+Local-first Workflow Review IDE for existing n8n workflows.
 
 OpenWorkflowDoctor reviews workflows. It does not run them.
 
 Current stable release: `v0.4.4` Public Demo Polish.
 
-It is not a workflow builder, workflow runtime, automatic n8n fixer, or production n8n connector.
+It is not a workflow builder, workflow runtime, automatic n8n fixer, or production n8n mutator.
 
-It turns exported n8n JSON into a secret-safe WorkflowIR, static risk report, structured patch preview, verifier result, human review checklist, and exportable Review Packet.
+It turns exported n8n JSON or optional read-only n8n imports into a secret-safe WorkflowIR, static risk report, structured patch preview, verifier result, human review checklist, and exportable Review Packet.
 
 AI can explain and propose structured `PatchOperation` candidates, but deterministic validation, verifier gates, and human review remain required.
 
@@ -17,9 +17,10 @@ AI can explain and propose structured `PatchOperation` candidates, but determini
 ## What It Does
 
 - Reviews exported n8n workflow JSON locally.
+- Optionally imports workflows from n8n through read-only workflow API calls.
 - Shows graph structure, static risks, patch previews, verifier gates, and review packets.
 - Keeps AI suggestions reviewable and bounded by structured validation.
-- Never executes workflows, reads credentials, writes back to n8n, or exports n8n-importable patched workflows.
+- Never executes workflows, reads credentials, writes back to n8n, activates/deactivates workflows, or exports n8n-importable patched workflows.
 
 ## Screenshot
 
@@ -53,6 +54,7 @@ For a tighter walkthrough, see [Demo Guide](docs/demo-guide.md).
 ## Features
 
 - Import exported n8n workflow JSON in the browser.
+- Import selected workflows from n8n as local read-only review copies.
 - Parse workflow JSON into secret-safe `WorkflowIR`.
 - Store multiple workflow reviews in a local IndexedDB workspace.
 - Switch active workflows from Workflow Explorer without rerunning Doctor.
@@ -64,6 +66,7 @@ For a tighter walkthrough, see [Demo Guide](docs/demo-guide.md).
 - Export a `DoctorReviewPacket` with before/after risk counts, readable patch diff, verifier gates, checklist state, review target fingerprint, and human decision.
 - Support advisory AI explanations with local BYOK provider settings and deterministic fallback.
 - Support AI-assisted patch proposals as validated structured `PatchOperation` candidates, with deterministic validation, patch preview, verifier gates, and human review still required.
+- Store n8n connection metadata locally while keeping n8n API keys session-only by default.
 - Support `zh-CN` and `en-US` UI copy.
 
 Supported static diagnostics currently include webhook dedupe, HTTP timeout, payment idempotency, missing error branches, incomplete control-flow routes, and missing success audit trails.
@@ -74,8 +77,10 @@ OpenWorkflowDoctor is local-first and review-first.
 
 - Imported workflow data stays in the browser workspace.
 - Settings, language, theme, and local AI provider settings stay in browser local storage.
-- API keys are masked in the UI and are not included in `WorkflowIR`, `DoctorReviewPacket`, or exported artifacts.
+- AI API keys are masked in the UI and are not included in `WorkflowIR`, `DoctorReviewPacket`, or exported artifacts.
+- n8n API keys are stored session-only and are not included in `WorkflowIR`, `DoctorReviewPacket`, Review Packet Artifacts, or Workflow Documents.
 - Sensitive parameter previews such as API keys, authorization headers, passwords, tokens, and secrets are redacted before they enter WorkflowIR, UI, or review exports.
+- n8n read-only import uses only workflow list/get endpoints with `excludePinnedData=true`.
 - Static diagnostics and deterministic patch generation work without an LLM.
 - AI Explainer remains advisory-only.
 - AI Patch Proposal can propose validated structured changes, but it cannot apply patches, mutate raw n8n JSON, change verifier status, or change human review.
@@ -87,7 +92,7 @@ Out of scope for the current MVP:
 
 - workflow execution
 - credential lookup or credential storage
-- production n8n API integration
+- production n8n mutation
 - raw n8n JSON mutation by an LLM
 - automatic write-back to n8n
 - n8n-importable patched workflow export
@@ -105,12 +110,12 @@ Out of scope for the current MVP:
 | v0.4.2 | Frozen | Real-model happy path and provider compatibility smoke results |
 | v0.4.3 | Frozen | Provider Presets and Compatibility Registry |
 | v0.4.4 | Current stable | Public demo polish, README demo media, issue templates, and feedback roadmap |
-| v0.5.0 | Planned | Read-only n8n Import. Import only, no execution and no write-back. |
+| v0.5.0 | Implemented, audit pending | Read-only n8n Import. Import only, no execution and no write-back. |
 | v0.6.0 | Planned | Execution Logs and Observability Analysis for failure paths, slow nodes, and error hotspots. |
 
 The current product definition through v0.4.4:
 
-OpenWorkflowDoctor is a local-first Workflow Review IDE. It supports importing multiple n8n workflows, running static diagnostics, previewing WorkflowIR patches, reviewing verifier output, recording human review, exporting Review Packets, generating advisory AI explanations, and requesting constrained AI PatchOperation proposals through configurable BYOK providers. AI never participates in final acceptance.
+OpenWorkflowDoctor is a local-first Workflow Review IDE. It supports importing multiple n8n workflows from JSON or optional read-only n8n workflow reads, running static diagnostics, previewing WorkflowIR patches, reviewing verifier output, recording human review, exporting Review Packets, generating advisory AI explanations, and requesting constrained AI PatchOperation proposals through configurable BYOK providers. AI never participates in final acceptance.
 
 ## Architecture
 
@@ -126,6 +131,8 @@ n8n JSON
   -> review packet export + acceptance checklist
   -> human accept / hold / reject
 ```
+
+For read-only n8n import details, see [v0.5 Read-only n8n Import](docs/n8n-readonly-import.md).
 
 Core rules:
 

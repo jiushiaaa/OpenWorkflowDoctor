@@ -2,6 +2,7 @@ export * from "./ai-patch-proposal.js";
 export * from "./doctor-report.js";
 export * from "./graph.js";
 export * from "./n8n-parser.js";
+export * from "./n8n-readonly-import.js";
 export * from "./patch.js";
 export * from "./patch-diff.js";
 export * from "./patch-proposal.js";

@@ -277,7 +277,8 @@ h3 {
 }
 
 .sample-list button,
-.workflow-explorer .section-title-row button {
+.workflow-explorer .section-title-row button,
+.workflow-explorer__actions button {
   min-height: 30px;
   border: 1px solid var(--border);
   border-radius: 6px;
@@ -290,9 +291,17 @@ h3 {
 }
 
 .sample-list button:hover,
-.workflow-explorer .section-title-row button:hover {
+.workflow-explorer .section-title-row button:hover,
+.workflow-explorer__actions button:hover {
   border-color: var(--border-strong);
   background: var(--surface-subtle);
+}
+
+.workflow-explorer__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: flex-end;
 }
 
 .workbench-actions {
@@ -434,6 +443,23 @@ h3 {
 
 .preview-note p {
   margin: 0;
+}
+
+.source-badge {
+  display: grid;
+  gap: 4px;
+  border: 1px solid #bbf7d0;
+  border-radius: 7px;
+  padding: 9px;
+  background: #f0fdf4;
+  color: var(--pass);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.source-badge span {
+  color: var(--text);
+  font-weight: 750;
 }
 
 .error-text {
@@ -1431,6 +1457,47 @@ h3 {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+}
+
+.connection-list {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.connection-list li {
+  display: grid;
+  gap: 8px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  padding: 9px;
+  background: var(--surface-subtle);
+}
+
+.connection-list li > button {
+  display: grid;
+  gap: 4px;
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  padding: 9px;
+  background: var(--surface);
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+}
+
+.connection-list li > button.is-selected {
+  border-color: var(--accent);
+  background: #eff6ff;
+}
+
+.connection-list small {
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.35;
 }
 
 .safety-list {

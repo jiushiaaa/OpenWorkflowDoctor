@@ -5,6 +5,7 @@ export type WorkflowExplorerItem = {
   id: string;
   name: string;
   sourceLabel: string;
+  sourceKind: string;
   statusLabel: string;
   humanReviewLabel: string;
   packetLabel: string;
@@ -16,6 +17,7 @@ export function WorkflowExplorer({
   samples,
   t,
   onImportClick,
+  onImportN8nClick,
   onLoadSample,
   onSelectWorkflow
 }: {
@@ -23,6 +25,7 @@ export function WorkflowExplorer({
   samples: SampleWorkflowCatalogItem[];
   t: Translator;
   onImportClick: () => void;
+  onImportN8nClick: () => void;
   onLoadSample: (sample: SampleWorkflowCatalogItem) => void;
   onSelectWorkflow: (workflowDocumentId: string) => void;
 }) {
@@ -33,9 +36,14 @@ export function WorkflowExplorer({
           <span>{t("explorer.localWorkspace")}</span>
           <strong>{t("explorer.title")}</strong>
         </div>
-        <button type="button" onClick={onImportClick}>
-          {t("actions.importJson")}
-        </button>
+        <div className="workflow-explorer__actions">
+          <button type="button" onClick={onImportClick}>
+            {t("actions.importJson")}
+          </button>
+          <button type="button" onClick={onImportN8nClick}>
+            {t("actions.importFromN8n")}
+          </button>
+        </div>
       </div>
 
       {workflows.length > 0 ? (
@@ -49,6 +57,7 @@ export function WorkflowExplorer({
                 onClick={() => onSelectWorkflow(workflow.id)}
               >
                 <strong>{workflow.name}</strong>
+                {workflow.sourceKind === "n8n-readonly" ? <small>{t("explorer.n8nReadonly")}</small> : null}
                 <small>{workflow.statusLabel}</small>
                 <small>{workflow.humanReviewLabel}</small>
                 <small>{workflow.packetLabel}</small>

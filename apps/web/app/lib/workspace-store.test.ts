@@ -5,7 +5,8 @@ import {
   createMemoryWorkspaceRepository,
   createReviewPacketArtifact,
   createWorkflowDocumentFromWorkflowIr,
-  parseWorkflowDocument
+  parseWorkflowDocument,
+  refreshN8nReadonlyWorkflowDocument
 } from "./workspace-store";
 import { loadWorkbenchSettings, saveWorkbenchSettings } from "./settings";
 
@@ -403,5 +404,163 @@ describe("local workspace repository", () => {
     expect(loadWorkbenchSettings(storage).language).toBe("en-US");
     expect(loadWorkbenchSettings(storage).theme).toBe("dark");
     expect(loadWorkbenchSettings(storage).ai.apiKey).toBe("sk-local-browser-only");
+  });
+
+  test("creates n8n-readonly workflow documents with source metadata and no API key leakage", async () => {
+    const repository = createMemoryWorkspaceRepository();
+    const firstWorkflow = parseN8nWorkflow({
+      id: "upstream-1",
+      name: "Read-only Import",
+      nodes: [],
+      connections: {}
+    });
+    const secondWorkflow = {
+      ...firstWorkflow,
+      id: "upstream-2",
+      name: "Second Read-only Import"
+    };
+    const firstDocument = createWorkflowDocumentFromWorkflowIr({
+      workflow: firstWorkflow,
+      sourceKind: "n8n-readonly",
+      sourceLabel: "Production n8n",
+      now: "2026-06-25T03:00:00.000Z",
+      readOnlySource: {
+        provider: "n8n",
+        connectionId: "conn_prod",
+        connectionLabel: "Production n8n",
+        environmentLabel: "prod",
+        baseUrlOrigin: "https://prod.example.test",
+        externalWorkflowId: "upstream-1",
+        importedAt: "2026-06-25T03:00:00.000Z",
+        lastFetchedAt: "2026-06-25T03:00:00.000Z",
+        upstreamUpdatedAt: "2026-06-25T02:00:00.000Z",
+        upstreamVersionId: "version-1",
+        upstreamActive: true,
+        upstreamTags: ["Finance"]
+      }
+    });
+    const secondDocument = createWorkflowDocumentFromWorkflowIr({
+      workflow: secondWorkflow,
+      sourceKind: "n8n-readonly",
+      sourceLabel: "Staging n8n",
+      readOnlySource: {
+        provider: "n8n",
+        connectionId: "conn_staging",
+        connectionLabel: "Staging n8n",
+        baseUrlOrigin: "https://staging.example.test",
+        externalWorkflowId: "upstream-2",
+        importedAt: "2026-06-25T03:05:00.000Z",
+        lastFetchedAt: "2026-06-25T03:05:00.000Z"
+      }
+    });
+
+    await repository.initialize();
+    await repository.saveWorkflowDocument(firstDocument);
+    await repository.saveWorkflowDocument(secondDocument);
+
+    expect((await repository.listWorkflowDocuments()).map((document) => document.sourceKind)).toEqual([
+      "n8n-readonly",
+      "n8n-readonly"
+    ]);
+    expect((await repository.getWorkflowDocument(firstDocument.id))?.readOnlySource).toMatchObject({
+      provider: "n8n",
+      connectionId: "conn_prod",
+      externalWorkflowId: "upstream-1",
+      upstreamTags: ["Finance"]
+    });
+    expect(JSON.stringify(await repository.listWorkflowDocuments())).not.toContain("n8n_api_secret");
+  });
+
+  test("refreshes n8n-readonly workflow metadata and marks existing report and AI proposal stale when upstream changes", () => {
+    const workflow = parseN8nWorkflow(branchWorkflow);
+    const document = createWorkflowDocumentFromWorkflowIr({
+      workflow,
+      sourceKind: "n8n-readonly",
+      sourceLabel: "Production n8n",
+      readOnlySource: {
+        provider: "n8n",
+        connectionId: "conn_prod",
+        connectionLabel: "Production n8n",
+        baseUrlOrigin: "https://prod.example.test",
+        externalWorkflowId: "refund-workflow",
+        importedAt: "2026-06-25T03:00:00.000Z",
+        lastFetchedAt: "2026-06-25T03:00:00.000Z",
+        upstreamUpdatedAt: "2026-06-25T02:00:00.000Z",
+        upstreamVersionId: "version-1"
+      }
+    });
+    const report = createDoctorReportFromWorkflow(workflow, document.currentRequest);
+    const changedWorkflow = {
+      ...workflow,
+      nodes: [
+        ...workflow.nodes,
+        {
+          id: "new-node",
+          name: "New Node",
+          type: "community.unknown",
+          typeFamily: "unknown" as const,
+          parameters: []
+        }
+      ]
+    };
+    const refreshed = refreshN8nReadonlyWorkflowDocument({
+      document: {
+        ...document,
+        latestReport: report,
+        latestReportState: "ready",
+        reviewMode: "patched",
+        aiPatchProposalState: {
+          status: "ready",
+          inputFingerprint: "aip1-old"
+        }
+      },
+      workflow: changedWorkflow,
+      now: "2026-06-25T04:00:00.000Z",
+      upstreamUpdatedAt: "2026-06-25T03:30:00.000Z",
+      upstreamVersionId: "version-2",
+      upstreamActive: false,
+      upstreamTags: ["Finance", "Updated"]
+    });
+
+    expect(refreshed.originalWorkflowIr.nodes.map((node) => node.id)).toContain("new-node");
+    expect(refreshed.latestReportState).toBe("stale");
+    expect(refreshed.reviewMode).toBe("original");
+    expect(refreshed.aiPatchProposalState.status).toBe("stale");
+    expect(refreshed.readOnlySource?.lastFetchedAt).toBe("2026-06-25T04:00:00.000Z");
+    expect(refreshed.readOnlySource?.upstreamVersionId).toBe("version-2");
+    expect(refreshed.readOnlySource?.upstreamActive).toBe(false);
+    expect(refreshed.readOnlySource?.upstreamTags).toEqual(["Finance", "Updated"]);
+  });
+
+  test("refreshing unchanged n8n-readonly workflow updates lastFetchedAt without staling report", () => {
+    const workflow = parseN8nWorkflow(branchWorkflow);
+    const document = createWorkflowDocumentFromWorkflowIr({
+      workflow,
+      sourceKind: "n8n-readonly",
+      sourceLabel: "Production n8n",
+      readOnlySource: {
+        provider: "n8n",
+        connectionId: "conn_prod",
+        connectionLabel: "Production n8n",
+        baseUrlOrigin: "https://prod.example.test",
+        externalWorkflowId: "refund-workflow",
+        importedAt: "2026-06-25T03:00:00.000Z",
+        lastFetchedAt: "2026-06-25T03:00:00.000Z"
+      }
+    });
+    const report = createDoctorReportFromWorkflow(workflow, document.currentRequest);
+    const refreshed = refreshN8nReadonlyWorkflowDocument({
+      document: {
+        ...document,
+        latestReport: report,
+        latestReportState: "ready"
+      },
+      workflow,
+      now: "2026-06-25T04:00:00.000Z"
+    });
+
+    expect(refreshed.latestReportState).toBe("ready");
+    expect(refreshed.latestReport).toEqual(report);
+    expect(refreshed.readOnlySource?.lastFetchedAt).toBe("2026-06-25T04:00:00.000Z");
   });
 });

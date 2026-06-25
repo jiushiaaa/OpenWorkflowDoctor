@@ -253,3 +253,107 @@ test("workbench imports two workflows and restores state when switching", async 
   ).toBeVisible();
   await expect(reviewConsole.getByText("Webhook has no dedupe guard", { exact: true })).toHaveCount(0);
 });
+
+test("workbench imports a workflow from read-only n8n and runs Doctor", async ({ page }) => {
+  await page.route("https://mock-n8n.example.test/api/v1/workflows**", async (route) => {
+    const requestUrl = new URL(route.request().url());
+    expect(route.request().method()).toBe("GET");
+    expect(route.request().headers()["x-n8n-api-key"]).toBe("n8n-session-key");
+    expect(requestUrl.searchParams.get("excludePinnedData")).toBe("true");
+
+    if (requestUrl.pathname.endsWith("/workflows/wf_readonly")) {
+      await route.fulfill({
+        contentType: "application/json",
+        body: JSON.stringify({
+          id: "wf_readonly",
+          name: "Read-only Refund Workflow",
+          active: true,
+          updatedAt: "2026-06-25T02:00:00.000Z",
+          versionId: "version-readonly",
+          pinData: {
+            Webhook: [{ json: { secret: "pinned-secret" } }]
+          },
+          nodes: [
+            {
+              id: "webhook",
+              name: "Webhook",
+              type: "n8n-nodes-base.webhook",
+              credentials: {
+                httpHeaderAuth: {
+                  id: "cred_should_not_leak",
+                  name: "Production Header"
+                }
+              },
+              parameters: {
+                path: "refund",
+                webhookUrl: "https://mock-n8n.example.test/webhook/secret"
+              }
+            },
+            {
+              id: "refund",
+              name: "Stripe Refund",
+              type: "n8n-nodes-base.stripe",
+              parameters: {
+                operation: "refund"
+              }
+            }
+          ],
+          connections: {
+            Webhook: {
+              main: [[{ node: "Stripe Refund", type: "main", index: 0 }]]
+            }
+          },
+          tags: [{ id: "tag-secret", name: "Finance" }]
+        })
+      });
+      return;
+    }
+
+    await route.fulfill({
+      contentType: "application/json",
+      body: JSON.stringify({
+        data: [
+          {
+            id: "wf_readonly",
+            name: "Read-only Refund Workflow",
+            active: true,
+            updatedAt: "2026-06-25T02:00:00.000Z",
+            tags: [{ id: "tag-secret", name: "Finance" }]
+          }
+        ],
+        nextCursor: null
+      })
+    });
+  });
+
+  await page.goto("/");
+  await page.getByRole("button", { name: "设置" }).click();
+  const settingsModal = page.getByRole("dialog", { name: "设置" });
+  await expect(settingsModal.getByRole("heading", { name: "n8n 连接" })).toBeVisible();
+  await settingsModal.getByLabel("连接名称").fill("Mock n8n");
+  await settingsModal.getByLabel("n8n 实例地址").fill("https://mock-n8n.example.test");
+  await settingsModal.getByLabel("环境标签").fill("test");
+  await settingsModal.getByLabel("n8n 会话 Key").fill("n8n-session-key");
+  await settingsModal.getByRole("button", { name: "保存 n8n 连接" }).click();
+  await expect(settingsModal.getByText("Mock n8n")).toBeVisible();
+  await settingsModal.getByRole("button", { name: "关闭" }).click();
+
+  await page.getByRole("button", { name: "从 n8n 导入" }).click();
+  const importDialog = page.getByRole("dialog", { name: "从 n8n 导入" });
+  await expect(importDialog.getByText("OpenWorkflowDoctor 不会修改 n8n")).toBeVisible();
+  await importDialog.getByRole("button", { name: "列出工作流" }).click();
+  await expect(importDialog.getByRole("button", { name: /Read-only Refund Workflow/ })).toBeVisible();
+  await importDialog.getByRole("button", { name: /Read-only Refund Workflow/ }).click();
+  await importDialog.getByRole("button", { name: "导入为本地审查副本" }).click();
+
+  const reviewSteps = page.getByRole("complementary", { name: "审查步骤" });
+  await expect(reviewSteps.getByRole("heading", { name: "Read-only Refund Workflow" })).toBeVisible();
+  await expect(reviewSteps.getByLabel("审查目标").getByText("只读 n8n 来源")).toBeVisible();
+  await expect(page.getByText("Imported as local review copy")).toBeVisible();
+  await expect(page.getByText("cred_should_not_leak")).toHaveCount(0);
+  await expect(page.getByText("Production Header")).toHaveCount(0);
+  await expect(page.getByText("pinned-secret")).toHaveCount(0);
+
+  await reviewSteps.locator(".primary-action").click();
+  await expect(page.getByRole("region", { name: "Review Console" }).getByText("Webhook has no dedupe guard")).toBeVisible();
+});

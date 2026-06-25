@@ -9,7 +9,7 @@ import type {
 import { aiPatchProposalCandidateSchema } from "@openworkflowdoctor/workflow-ir";
 import { z } from "zod";
 
-export type WorkflowDocumentSourceKind = "imported-file" | "sample" | "migrated-v0.2";
+export type WorkflowDocumentSourceKind = "imported-file" | "sample" | "migrated-v0.2" | "n8n-readonly";
 export type LatestReportState = "not-run" | "ready" | "stale";
 export type ReviewMode = "original" | "patched";
 export type WorkspaceConsoleTab = "summary" | "risks" | "ai" | "patch" | "verification" | "packet" | "logs";
@@ -59,6 +59,7 @@ export type WorkflowDocument = {
   selectedNodeId: string | null;
   reviewPacketArtifactIds: string[];
   aiPatchProposalState: AiPatchProposalState;
+  readOnlySource?: N8nReadOnlySourceMetadata;
 };
 
 export type ReviewPacketArtifact = {
@@ -78,6 +79,32 @@ export type WorkflowDocumentInput = {
   sourceLabel: string;
   request?: string;
   now?: string;
+  readOnlySource?: N8nReadOnlySourceMetadata;
+};
+
+export type N8nReadOnlySourceMetadata = {
+  provider: "n8n";
+  connectionId: string;
+  connectionLabel: string;
+  environmentLabel?: string;
+  baseUrlOrigin: string;
+  externalWorkflowId: string;
+  importedAt: string;
+  lastFetchedAt: string;
+  upstreamUpdatedAt?: string;
+  upstreamVersionId?: string;
+  upstreamActive?: boolean;
+  upstreamTags?: string[];
+};
+
+export type N8nReadonlyRefreshInput = {
+  document: WorkflowDocument;
+  workflow: WorkflowIR;
+  now?: string;
+  upstreamUpdatedAt?: string;
+  upstreamVersionId?: string;
+  upstreamActive?: boolean;
+  upstreamTags?: string[];
 };
 
 export type ReviewPacketArtifactInput = {
@@ -117,7 +144,7 @@ const humanReviewDecisionSchema = z.enum(["undecided", "accepted", "held", "reje
 const latestReportStateSchema = z.enum(["not-run", "ready", "stale"]);
 const reviewModeSchema = z.enum(["original", "patched"]);
 const workspaceConsoleTabSchema = z.enum(["summary", "risks", "ai", "patch", "verification", "packet", "logs"]);
-const sourceKindSchema = z.enum(["imported-file", "sample", "migrated-v0.2"]);
+const sourceKindSchema = z.enum(["imported-file", "sample", "migrated-v0.2", "n8n-readonly"]);
 const nodeTypeFamilySchema = z.enum(["known", "unknown"]);
 const parameterValueTypeSchema = z.enum(["array", "boolean", "null", "number", "object", "string", "unknown"]);
 const aiPatchProposalStateStatusSchema = z.enum([
@@ -138,12 +165,19 @@ const nodeParameterSummarySchema = z.object({
   redacted: z.boolean().optional()
 }).strict();
 
+const credentialSummarySchema = z.object({
+  credentialReferencePresent: z.boolean(),
+  credentialTypes: z.array(z.string().min(1)),
+  credentialCount: z.number().int().nonnegative()
+}).strict();
+
 const nodeIrSchema = z.object({
   id: z.string().min(1),
   name: z.string().min(1),
   type: z.string().min(1),
   typeFamily: nodeTypeFamilySchema,
-  parameters: z.array(nodeParameterSummarySchema)
+  parameters: z.array(nodeParameterSummarySchema),
+  credentialSummary: credentialSummarySchema.optional()
 }).strict();
 
 const edgeIrSchema = z.object({
@@ -176,6 +210,21 @@ const aiPatchProposalStateSchema = z.object({
   inputFingerprint: z.string().optional()
 }).strict();
 
+const n8nReadOnlySourceMetadataSchema = z.object({
+  provider: z.literal("n8n"),
+  connectionId: z.string().min(1),
+  connectionLabel: z.string().min(1),
+  environmentLabel: z.string().min(1).optional(),
+  baseUrlOrigin: z.string().min(1),
+  externalWorkflowId: z.string().min(1),
+  importedAt: z.string().min(1),
+  lastFetchedAt: z.string().min(1),
+  upstreamUpdatedAt: z.string().min(1).optional(),
+  upstreamVersionId: z.string().min(1).optional(),
+  upstreamActive: z.boolean().optional(),
+  upstreamTags: z.array(z.string()).optional()
+}).strict();
+
 const localWorkspaceSchema = z.object({
   schemaVersion: z.literal("openworkflowdoctor.workspace.v1"),
   id: z.string().min(1),
@@ -203,7 +252,8 @@ const workflowDocumentSchema = z.object({
   activeTab: workspaceConsoleTabSchema,
   selectedNodeId: z.string().min(1).nullable(),
   reviewPacketArtifactIds: z.array(z.string().min(1)),
-  aiPatchProposalState: aiPatchProposalStateSchema
+  aiPatchProposalState: aiPatchProposalStateSchema,
+  readOnlySource: n8nReadOnlySourceMetadataSchema.optional()
 }).strict();
 
 const reviewPacketArtifactSchema = z.object({
@@ -221,7 +271,7 @@ export function createWorkflowDocumentFromWorkflowIr(input: WorkflowDocumentInpu
   const now = input.now ?? new Date().toISOString();
   const workflow = parseWorkflowIr(input.workflow);
 
-  return {
+  const document: WorkflowDocument = {
     schemaVersion: "openworkflowdoctor.workflow-document.v1",
     id: createLocalId("workflow"),
     displayName: workflow.name,
@@ -239,6 +289,60 @@ export function createWorkflowDocumentFromWorkflowIr(input: WorkflowDocumentInpu
     reviewPacketArtifactIds: [],
     aiPatchProposalState: createEmptyAiPatchProposalState()
   };
+
+  if (input.readOnlySource) {
+    document.readOnlySource = {
+      ...input.readOnlySource,
+      importedAt: input.readOnlySource.importedAt || now,
+      lastFetchedAt: input.readOnlySource.lastFetchedAt || now
+    };
+  }
+
+  return parseWorkflowDocument(document);
+}
+
+export function refreshN8nReadonlyWorkflowDocument(input: N8nReadonlyRefreshInput): WorkflowDocument {
+  if (input.document.sourceKind !== "n8n-readonly" || !input.document.readOnlySource) {
+    throw new Error("Workflow document is not an n8n read-only import.");
+  }
+
+  const now = input.now ?? new Date().toISOString();
+  const workflow = parseWorkflowIr(input.workflow);
+  const changed = fingerprintWorkflow(input.document.originalWorkflowIr) !== fingerprintWorkflow(workflow);
+  const readOnlySource: N8nReadOnlySourceMetadata = {
+    ...input.document.readOnlySource,
+    lastFetchedAt: now,
+    ...(input.upstreamUpdatedAt ? { upstreamUpdatedAt: input.upstreamUpdatedAt } : {}),
+    ...(input.upstreamVersionId ? { upstreamVersionId: input.upstreamVersionId } : {}),
+    ...(typeof input.upstreamActive === "boolean" ? { upstreamActive: input.upstreamActive } : {}),
+    ...(input.upstreamTags ? { upstreamTags: input.upstreamTags } : {})
+  };
+
+  if (!changed) {
+    return parseWorkflowDocument({
+      ...input.document,
+      updatedAt: now,
+      readOnlySource
+    });
+  }
+
+  return parseWorkflowDocument({
+    ...input.document,
+    displayName: workflow.name,
+    updatedAt: now,
+    originalWorkflowIr: workflow,
+    latestReportState: input.document.latestReport ? "stale" : input.document.latestReportState,
+    reviewMode: "original",
+    selectedNodeId: workflow.nodes[0]?.id ?? null,
+    aiPatchProposalState:
+      input.document.aiPatchProposalState.status === "idle"
+        ? input.document.aiPatchProposalState
+        : {
+            ...input.document.aiPatchProposalState,
+            status: "stale"
+          },
+    readOnlySource
+  });
 }
 
 export function createReviewPacketArtifact(input: ReviewPacketArtifactInput): ReviewPacketArtifact {
@@ -581,6 +685,10 @@ function cloneJson<T>(value: T): T {
 
 function cloneNullable<T>(value: T | undefined): T | null {
   return value ? cloneJson(value) : null;
+}
+
+function fingerprintWorkflow(workflow: WorkflowIR): string {
+  return JSON.stringify(workflow);
 }
 
 function openWorkspaceDatabase(indexedDb: IDBFactory): Promise<IDBDatabase> {

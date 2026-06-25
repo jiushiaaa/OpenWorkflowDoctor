@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { importN8nReadonlyWorkflow as importN8nReadonlyPayload } from "@openworkflowdoctor/workflow-ir";
 import { CommandPalette } from "./components/CommandPalette";
 import { InspectorPanel } from "./components/InspectorPanel";
 import { ReviewConsole } from "./components/ReviewConsole";
@@ -31,6 +32,18 @@ import {
   type ThemeMode,
   type WorkbenchSettings
 } from "./lib/settings";
+import {
+  clearN8nSessionApiKey,
+  deleteN8nConnection,
+  getN8nBaseUrlOrigin,
+  getN8nSessionApiKey,
+  loadN8nConnections,
+  saveN8nConnection,
+  saveN8nSessionApiKey,
+  type N8nConnectionSettings,
+  type SaveN8nConnectionInput
+} from "./lib/n8n-connections";
+import { createN8nReadonlyClient, type N8nWorkflowListItem } from "./lib/n8n-readonly-client";
 import type { WorkflowExplorerItem } from "./components/WorkflowExplorer";
 
 export default function Home() {
@@ -38,6 +51,19 @@ export default function Home() {
   const resetAiExplainerRef = useRef<() => void>(() => {});
   const [settings, setSettings] = useState<WorkbenchSettings>(defaultWorkbenchSettings);
   const [settingsLoaded, setSettingsLoaded] = useState(false);
+  const [n8nConnections, setN8nConnections] = useState<N8nConnectionSettings[]>([]);
+  const [n8nDraft, setN8nDraft] = useState<SaveN8nConnectionInput>({
+    label: "",
+    baseUrl: "",
+    environmentLabel: ""
+  });
+  const [n8nApiKey, setN8nApiKey] = useState("");
+  const [isN8nImportOpen, setIsN8nImportOpen] = useState(false);
+  const [n8nImportConnectionId, setN8nImportConnectionId] = useState("");
+  const [n8nWorkflowList, setN8nWorkflowList] = useState<N8nWorkflowListItem[]>([]);
+  const [selectedN8nWorkflowId, setSelectedN8nWorkflowId] = useState("");
+  const [n8nImportStatus, setN8nImportStatus] = useState<"idle" | "loading" | "importing" | "error">("idle");
+  const [n8nImportError, setN8nImportError] = useState<string | null>(null);
   const [systemTheme, setSystemTheme] = useState<Exclude<ThemeMode, "system">>(() =>
     typeof window !== "undefined" && window.matchMedia("(prefers-color-scheme: dark)").matches
       ? "dark"
@@ -49,6 +75,7 @@ export default function Home() {
   const t = useMemo(() => createTranslator(settings.language), [settings.language]);
   const aiProviderStatus = getAiProviderStatus(settings.ai);
   const resolvedTheme = settings.theme === "system" ? systemTheme : settings.theme;
+  const n8nClient = useMemo(() => createN8nReadonlyClient(), []);
 
   const workspace = useWorkspaceController({
     onWorkspaceChanged: () => resetAiExplainerRef.current()
@@ -79,6 +106,7 @@ export default function Home() {
         id: document.id,
         name: document.displayName,
         sourceLabel: document.sourceLabel,
+        sourceKind: document.sourceKind,
         statusLabel: getWorkflowDocumentStatusLabel(document, t),
         humanReviewLabel: getHumanDecisionLabel(document.humanReviewDraft.decision, t),
         packetLabel:
@@ -104,6 +132,12 @@ export default function Home() {
       action: () => {
         fileInputRef.current?.click();
       }
+    },
+    {
+      label: t("actions.importFromN8n"),
+      hint: t("command.importN8nHint"),
+      disabled: n8nConnections.length === 0,
+      action: () => setIsN8nImportOpen(true)
     },
     {
       label: t("actions.runDoctor"),
@@ -150,6 +184,138 @@ export default function Home() {
     setSettingsTestStatus("cleared");
   }
 
+  function handleSaveN8nConnection() {
+    const connection = saveN8nConnection(window.localStorage, n8nDraft);
+    if (n8nApiKey.trim()) {
+      saveN8nSessionApiKey(window.sessionStorage, connection.connectionId, n8nApiKey.trim());
+    }
+    const connections = loadN8nConnections(window.localStorage);
+    setN8nConnections(connections);
+    setN8nImportConnectionId(connection.connectionId);
+    setN8nDraft({
+      label: "",
+      baseUrl: "",
+      environmentLabel: ""
+    });
+    setN8nApiKey("");
+  }
+
+  function handleDeleteN8nConnection(connectionId: string) {
+    deleteN8nConnection(window.localStorage, window.sessionStorage, connectionId);
+    setN8nConnections(loadN8nConnections(window.localStorage));
+    if (n8nImportConnectionId === connectionId) {
+      setN8nImportConnectionId("");
+    }
+  }
+
+  function handleClearN8nSessionKey(connectionId: string) {
+    clearN8nSessionApiKey(window.sessionStorage, connectionId);
+  }
+
+  async function handleListN8nWorkflows() {
+    const connection = getSelectedN8nConnection();
+    if (!connection) {
+      setN8nImportError("No n8n connection selected.");
+      return;
+    }
+    const apiKey = getN8nSessionApiKey(window.sessionStorage, connection.connectionId);
+    if (!apiKey) {
+      setN8nImportError("n8n API key is only stored for this session. Re-enter it in Settings.");
+      return;
+    }
+
+    try {
+      setN8nImportStatus("loading");
+      setN8nImportError(null);
+      const workflows = await n8nClient.listWorkflows({ connection, apiKey });
+      setN8nWorkflowList(workflows);
+      setSelectedN8nWorkflowId(workflows[0]?.id ?? "");
+      setN8nImportStatus("idle");
+    } catch (error) {
+      setN8nImportStatus("error");
+      setN8nImportError(error instanceof Error ? error.message : "Unable to list n8n workflows.");
+    }
+  }
+
+  async function handleImportSelectedN8nWorkflow() {
+    const connection = getSelectedN8nConnection();
+    if (!connection || !selectedN8nWorkflowId) {
+      setN8nImportError("Select an n8n workflow first.");
+      return;
+    }
+    const apiKey = getN8nSessionApiKey(window.sessionStorage, connection.connectionId);
+    if (!apiKey) {
+      setN8nImportError("n8n API key is only stored for this session. Re-enter it in Settings.");
+      return;
+    }
+
+    try {
+      setN8nImportStatus("importing");
+      setN8nImportError(null);
+      const rawWorkflow = await n8nClient.getWorkflow({ connection, apiKey, workflowId: selectedN8nWorkflowId });
+      const imported = importN8nReadonlyPayload(rawWorkflow);
+      const now = new Date().toISOString();
+      await workspace.importN8nReadonlyWorkflow({
+        workflow: imported.workflow,
+        sourceLabel: connection.label,
+        readOnlySource: {
+          provider: "n8n",
+          connectionId: connection.connectionId,
+          connectionLabel: connection.label,
+          ...(connection.environmentLabel ? { environmentLabel: connection.environmentLabel } : {}),
+          baseUrlOrigin: getN8nBaseUrlOrigin(connection.baseUrl),
+          externalWorkflowId: imported.metadata.externalWorkflowId ?? selectedN8nWorkflowId,
+          importedAt: now,
+          lastFetchedAt: now,
+          ...(imported.metadata.upstreamUpdatedAt ? { upstreamUpdatedAt: imported.metadata.upstreamUpdatedAt } : {}),
+          ...(imported.metadata.upstreamVersionId ? { upstreamVersionId: imported.metadata.upstreamVersionId } : {}),
+          ...(typeof imported.metadata.active === "boolean" ? { upstreamActive: imported.metadata.active } : {}),
+          upstreamTags: imported.metadata.tags
+        }
+      });
+      setIsN8nImportOpen(false);
+      setN8nImportStatus("idle");
+    } catch (error) {
+      setN8nImportStatus("error");
+      setN8nImportError(error instanceof Error ? error.message : "Unable to import selected n8n workflow.");
+    }
+  }
+
+  async function handleRefreshActiveN8nWorkflow() {
+    const readOnlySource = workspace.activeDocument?.readOnlySource;
+    if (!readOnlySource) {
+      return;
+    }
+    const connection = n8nConnections.find((item) => item.connectionId === readOnlySource.connectionId);
+    if (!connection) {
+      workspace.setError("The n8n connection for this workflow was deleted.");
+      return;
+    }
+    const apiKey = getN8nSessionApiKey(window.sessionStorage, connection.connectionId);
+    if (!apiKey) {
+      workspace.setError("n8n API key is only stored for this session. Re-enter it in Settings.");
+      return;
+    }
+
+    const rawWorkflow = await n8nClient.getWorkflow({
+      connection,
+      apiKey,
+      workflowId: readOnlySource.externalWorkflowId
+    });
+    const imported = importN8nReadonlyPayload(rawWorkflow);
+    await workspace.refreshN8nReadonlyDocument({
+      workflow: imported.workflow,
+      ...(imported.metadata.upstreamUpdatedAt ? { upstreamUpdatedAt: imported.metadata.upstreamUpdatedAt } : {}),
+      ...(imported.metadata.upstreamVersionId ? { upstreamVersionId: imported.metadata.upstreamVersionId } : {}),
+      ...(typeof imported.metadata.active === "boolean" ? { upstreamActive: imported.metadata.active } : {}),
+      upstreamTags: imported.metadata.tags
+    });
+  }
+
+  function getSelectedN8nConnection() {
+    return n8nConnections.find((connection) => connection.connectionId === n8nImportConnectionId) ?? n8nConnections[0] ?? null;
+  }
+
   function handlePrimaryAction() {
     if (!doctor.workflowInput) {
       fileInputRef.current?.click();
@@ -184,6 +350,9 @@ export default function Home() {
   useEffect(() => {
     const loadHandle = window.setTimeout(() => {
       setSettings(loadWorkbenchSettings(window.localStorage));
+      const connections = loadN8nConnections(window.localStorage);
+      setN8nConnections(connections);
+      setN8nImportConnectionId(connections[0]?.connectionId ?? "");
       setSettingsLoaded(true);
     }, 0);
 
@@ -253,14 +422,18 @@ export default function Home() {
         isReportStale={doctor.isReportStale}
         error={workspace.error}
         humanDecision={doctor.humanDecision}
+        sourceKind={workspace.activeDocument?.sourceKind}
+        sourceLabel={workspace.activeDocument?.sourceLabel}
         t={t}
         onImportFile={(file) => void handleImportWorkflowFile(file)}
         onImportClick={() => fileInputRef.current?.click()}
+        onImportN8nClick={() => setIsN8nImportOpen(true)}
         onLoadSample={(sample) => void workspace.loadSampleWorkflow(sample)}
         onSelectWorkflow={(workflowDocumentId) => void workspace.selectWorkflowDocument(workflowDocumentId)}
         onPrimaryAction={handlePrimaryAction}
         onRequestChange={doctor.updatePatchRequest}
         onRunDoctor={doctor.rerunDoctor}
+        onRefreshN8n={() => void handleRefreshActiveN8nWorkflow()}
       />
 
       <section className="workspace" aria-label={t("workspace.label")}>
@@ -361,6 +534,89 @@ export default function Home() {
         />
       ) : null}
 
+      {isN8nImportOpen ? (
+        <section className="modal-overlay" role="presentation">
+          <div className="settings-modal n8n-import-modal" role="dialog" aria-modal="true" aria-label={t("actions.importFromN8n")}>
+            <header>
+              <div>
+                <span>{t("explorer.n8nReadonly")}</span>
+                <h2>{t("actions.importFromN8n")}</h2>
+              </div>
+              <button type="button" onClick={() => setIsN8nImportOpen(false)} aria-label={t("actions.close")}>
+                {t("actions.close")}
+              </button>
+            </header>
+            <div className="settings-body">
+              <section className="settings-section">
+                <h3>{t("n8nImport.warningTitle")}</h3>
+                <p className="settings-help">{t("n8nImport.warningBody")}</p>
+                <label>
+                  <span>{t("n8nImport.connection")}</span>
+                  <select
+                    value={n8nImportConnectionId}
+                    onChange={(event) => {
+                      setN8nImportConnectionId(event.target.value);
+                      setN8nWorkflowList([]);
+                      setSelectedN8nWorkflowId("");
+                    }}
+                  >
+                    {n8nConnections.map((connection) => (
+                      <option key={connection.connectionId} value={connection.connectionId}>
+                        {connection.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <div className="settings-actions">
+                  <button
+                    type="button"
+                    onClick={() => void handleListN8nWorkflows()}
+                    disabled={n8nImportStatus === "loading" || n8nConnections.length === 0}
+                  >
+                    {n8nImportStatus === "loading" ? t("actions.loading") : t("actions.listN8nWorkflows")}
+                  </button>
+                </div>
+              </section>
+
+              {n8nWorkflowList.length > 0 ? (
+                <section className="settings-section">
+                  <h3>{t("n8nImport.workflowList")}</h3>
+                  <ul className="connection-list">
+                    {n8nWorkflowList.map((workflow) => (
+                      <li key={workflow.id}>
+                        <button
+                          type="button"
+                          className={selectedN8nWorkflowId === workflow.id ? "is-selected" : ""}
+                          onClick={() => setSelectedN8nWorkflowId(workflow.id)}
+                        >
+                          <strong>{workflow.name}</strong>
+                          <small>
+                            {workflow.active ? t("n8nImport.active") : t("n8nImport.inactive")}
+                            {workflow.updatedAt ? ` · ${workflow.updatedAt}` : ""}
+                          </small>
+                          {workflow.tags.length > 0 ? <small>{workflow.tags.join(", ")}</small> : null}
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                  <div className="settings-actions">
+                    <button
+                      type="button"
+                      onClick={() => void handleImportSelectedN8nWorkflow()}
+                      disabled={!selectedN8nWorkflowId || n8nImportStatus === "importing"}
+                    >
+                      {n8nImportStatus === "importing" ? t("actions.importing") : t("actions.importLocalReviewCopy")}
+                    </button>
+                  </div>
+                </section>
+              ) : null}
+
+              {n8nImportError ? <p className="error-text">{n8nImportError}</p> : null}
+            </div>
+          </div>
+        </section>
+      ) : null}
+
       {isSettingsOpen ? (
         <SettingsModal
           settings={settings}
@@ -368,8 +624,16 @@ export default function Home() {
           testStatus={settingsTestStatus}
           t={t}
           onSettingsChange={updateSettings}
+          n8nConnections={n8nConnections}
+          n8nDraft={n8nDraft}
+          n8nApiKey={n8nApiKey}
           onTestConnection={() => void ai.testAiConnection()}
           onClearCredentials={clearCredentials}
+          onN8nDraftChange={setN8nDraft}
+          onN8nApiKeyChange={setN8nApiKey}
+          onSaveN8nConnection={handleSaveN8nConnection}
+          onDeleteN8nConnection={handleDeleteN8nConnection}
+          onClearN8nSessionKey={handleClearN8nSessionKey}
           onClearWorkspaceData={() => void workspace.clearWorkspaceData()}
           onClose={() => setIsSettingsOpen(false)}
         />
