@@ -4,7 +4,7 @@ export const DEFAULT_LANGUAGE: Language = "zh-CN";
 
 export const dictionaries = {
   "zh-CN": {
-    "app.version": "OpenWorkflowDoctor v0.6.0",
+    "app.version": "OpenWorkflowDoctor v0.6.1",
     "toolbar.commandPalette": "命令面板",
     "toolbar.settings": "设置",
     "toolbar.metrics.nodes": "节点",
@@ -300,7 +300,7 @@ export const dictionaries = {
     ,"dify.warningBody": "仅用于诊断。OpenWorkflowDoctor 不会运行、发布或写回 Dify。"
   },
   "en-US": {
-    "app.version": "OpenWorkflowDoctor v0.6.0",
+    "app.version": "OpenWorkflowDoctor v0.6.1",
     "toolbar.commandPalette": "Command Palette",
     "toolbar.settings": "Settings",
     "toolbar.metrics.nodes": "Nodes",

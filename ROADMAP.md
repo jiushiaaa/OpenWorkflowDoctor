@@ -4,7 +4,7 @@ OpenWorkflowDoctor is a local-first Workflow Review IDE for existing workflow ar
 
 ## Current Stable Release
 
-`v0.4.4` is the current stable release: Public Demo Polish.
+`v0.6.1` is the current release line: Dify Read-only Import Feasibility Notes. It documents future Dify direct import boundaries without changing product behavior.
 
 The current product loop is:
 

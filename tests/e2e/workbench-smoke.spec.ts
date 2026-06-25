@@ -24,11 +24,11 @@ test("first-run onboarding completes demo mode without n8n or AI", async ({ page
   await expect(page.getByRole("dialog", { name: "First-run onboarding" })).toHaveCount(0);
 });
 
-test("workbench supports the deterministic v0.6.0 review packet demo flow", async ({ page }) => {
+test("workbench supports the deterministic v0.6.1 review packet demo flow", async ({ page }) => {
   test.setTimeout(60000);
   await page.goto("/");
 
-  await expect(page.getByText("OpenWorkflowDoctor v0.6.0").first()).toBeVisible();
+  await expect(page.getByText("OpenWorkflowDoctor v0.6.1").first()).toBeVisible();
   await expect(page.getByRole("heading", { name: "本地静态审查导出的 n8n JSON" })).toBeVisible();
   const welcomeChecklist = page.getByRole("region", { name: "本次审查会产出" });
   await expect(welcomeChecklist).toBeVisible();

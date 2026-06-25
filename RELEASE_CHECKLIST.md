@@ -1,4 +1,4 @@
-# OpenWorkflowDoctor v0.5.2 Public Release Checklist
+# OpenWorkflowDoctor v0.6.1 Public Release Checklist
 
 Run these commands from the repository root before any public release commit:
 
@@ -16,7 +16,7 @@ Expected result: every command exits with code 0. For `docker compose up`, verif
 
 ## Public docs checks
 
-- README names `v0.5.2` as the current stable release.
+- README names `v0.6.1` as the current release line.
 - README shows Docker Compose as the recommended public try-out path.
 - README keeps Node setup documented as contributor setup.
 - `docs/local-deployment.md` explains Docker, Node, and local data.
@@ -24,14 +24,17 @@ Expected result: every command exits with code 0. For `docker compose up`, verif
 - `docs/troubleshooting.md` explains n8n checks, AI checks, and reset actions.
 - `docs/public-demo-checklist.md` covers the public demo gates.
 - `DEMO_SCRIPT.md` starts from onboarding and Docker.
-- GitHub Actions Docker Smoke must pass before tagging v0.5.2.
+- GitHub Actions Docker Smoke must pass before tagging v0.6.1.
 
-## v0.5.2 freeze checks
+## v0.6.1 freeze checks
 
 - Demo mode works without n8n.
 - Demo mode works without AI.
 - First-run onboarding can be reopened from Settings.
 - n8n import remains read-only.
+- Dify DSL YAML import remains the stable supported Dify path.
+- Dify direct import remains deferred and experimental only.
+- No Dify API connection, session/cookie handling, execution, publish, write-back, dataset fetch, plugin fetch, file fetch, or raw DSL persistence is introduced.
 - n8n API keys remain session-only.
 - n8n requests keep using `excludePinnedData=true`.
 - Troubleshooting shows invalid n8n URL guidance.

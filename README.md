@@ -4,7 +4,7 @@ Local-first Workflow Review IDE for existing n8n workflows.
 
 OpenWorkflowDoctor reviews workflows. It does not run them.
 
-Current freeze candidate: `v0.6.0` Dify DSL YAML Import. v0.6.1 feasibility notes defer Dify read-only import exploration behind a future experimental flag.
+Current release line: `v0.6.1` Dify read-only import feasibility notes on top of `v0.6.0` Dify DSL YAML Import.
 
 It is not a workflow builder, workflow runtime, automatic n8n fixer, or production n8n mutator.
 
@@ -131,10 +131,10 @@ Out of scope for the current MVP:
 | v0.5.0 | Frozen | Read-only n8n Import. Import only, no execution and no write-back. |
 | v0.5.1 | Frozen | Real n8n import polish, CORS/proxy hardening, and manual smoke checklist. |
 | v0.5.2 | Frozen | Onboarding, Docker Compose local deployment, demo mode, troubleshooting, and reset polish. |
-| v0.6.0 | Current freeze candidate | Dify DSL YAML Import. Import only, no Dify API, no execution, no publish, and no write-back. |
-| v0.6.1 | Deferred notes | Dify read-only import feasibility only. No shipped Dify API connection or user-facing import surface. |
+| v0.6.0 | Frozen | Dify DSL YAML Import. Import only, no Dify API, no execution, no publish, and no write-back. |
+| v0.6.1 | Current docs release | Dify read-only import feasibility only. No shipped Dify API connection or user-facing import surface. |
 
-The current product definition through v0.6.0:
+The current product definition through v0.6.1:
 
 OpenWorkflowDoctor is a local-first Workflow Review IDE. It supports importing multiple n8n workflows from JSON or optional read-only n8n workflow reads, running static diagnostics, previewing WorkflowIR patches, reviewing verifier output, recording human review, exporting Review Packets, generating advisory AI explanations, and requesting constrained AI PatchOperation proposals through configurable BYOK providers. AI never participates in final acceptance.
 

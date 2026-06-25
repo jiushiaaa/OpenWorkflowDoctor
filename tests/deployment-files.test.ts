@@ -62,6 +62,33 @@ describe("local deployment files", () => {
     expect(readme).not.toContain("direct Dify connection");
   });
 
+  test("version metadata stays aligned for v0.6.1", () => {
+    const packageFiles = [
+      "package.json",
+      "apps/web/package.json",
+      "packages/workflow-ai/package.json",
+      "packages/workflow-ir/package.json"
+    ];
+
+    for (const packageFile of packageFiles) {
+      const manifest = JSON.parse(readProjectFile(packageFile)) as {
+        version?: string;
+        dependencies?: Record<string, string>;
+      };
+
+      expect(manifest.version).toBe("0.6.1");
+      expect(manifest.dependencies?.["@openworkflowdoctor/workflow-ai"]).not.toBe("0.6.0");
+      expect(manifest.dependencies?.["@openworkflowdoctor/workflow-ir"]).not.toBe("0.6.0");
+    }
+
+    const lockfile = readProjectFile("package-lock.json");
+    const roadmap = readProjectFile("ROADMAP.md");
+    expect(lockfile).toContain('"version": "0.6.1"');
+    expect(lockfile).not.toContain('"@openworkflowdoctor/workflow-ir": "0.6.0"');
+    expect(lockfile).not.toContain('"@openworkflowdoctor/workflow-ai": "0.6.0"');
+    expect(roadmap).toContain("`v0.6.1` is the current release line");
+  });
+
   test("GitHub Actions Docker smoke workflow builds, starts, probes, and cleans up Compose", () => {
     const workflow = readProjectFile(".github/workflows/docker-smoke.yml");
 
