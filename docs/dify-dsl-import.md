@@ -1,8 +1,10 @@
 # v0.6 Dify DSL Import
 
-OpenWorkflowDoctor v0.6 adds Dify DSL YAML as the first non-n8n platform adapter.
+OpenWorkflowDoctor v0.6 adds Dify DSL YAML as the first non-n8n platform adapter. YAML import remains the stable supported Dify path.
 
 This is an import source only. It does not add a Dify API connection, workflow execution, publish, write-back, credential lookup, dataset fetch, plugin fetch, file fetch, URL fetch, or patched Dify DSL export.
+
+The policy is simple: direct Dify import is intentionally deferred. The currently feasible remote acquisition routes are Dify console/internal APIs, not stable public app runtime APIs, and they are version-sensitive. Future exploration is documented in [v0.6.1 Dify Read-only Import Feasibility](dify-readonly-import-feasibility.md) and must stay experimental behind a feature flag before any user-facing release.
 
 ## Trust Boundary
 
@@ -102,6 +104,7 @@ Dify imports show a `Dify DSL` source badge and the warning:
 v0.6 does not include:
 
 - Dify API connection
+- Dify direct read-only import
 - Dify workflow execution
 - Dify publish or write-back
 - Dify credential inspection

@@ -42,6 +42,26 @@ describe("local deployment files", () => {
     expect(checklist).toContain("No docs imply hosted SaaS, write-back, or execution");
   });
 
+  test("Dify direct import feasibility docs keep the feature experimental and deferred", () => {
+    const feasibility = readProjectFile("docs/dify-readonly-import-feasibility.md");
+    const difyDslImport = readProjectFile("docs/dify-dsl-import.md");
+    const roadmap = readProjectFile("ROADMAP.md");
+    const readme = readProjectFile("README.md");
+
+    expect(feasibility).toContain("experimental");
+    expect(feasibility).toContain("deferred");
+    expect(feasibility).toContain("Dify DSL YAML import is the stable supported path");
+    expect(feasibility).toContain("feature flag");
+    expect(feasibility).not.toContain("Dify direct import is currently supported");
+    expect(difyDslImport).toContain("YAML import remains the stable supported Dify path");
+    expect(difyDslImport).toContain("direct Dify import is intentionally deferred");
+    expect(roadmap).toContain("Dify Read-only Import, Experimental");
+    expect(roadmap).toContain("Status: deferred");
+    expect(readme).toContain("Imports Dify DSL YAML as a local diagnosis-only review copy.");
+    expect(readme).not.toContain("Dify direct connection");
+    expect(readme).not.toContain("direct Dify connection");
+  });
+
   test("GitHub Actions Docker smoke workflow builds, starts, probes, and cleans up Compose", () => {
     const workflow = readProjectFile(".github/workflows/docker-smoke.yml");
 

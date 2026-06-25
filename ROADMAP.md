@@ -85,6 +85,28 @@ Scope:
 - No publish or write-back.
 - No patched Dify DSL export.
 
+## v0.6.1 - Deferred: Dify Read-only Import, Experimental
+
+Status: deferred.
+
+Scope of the v0.6.1 note:
+
+- Document feasibility for remote Dify DSL acquisition only.
+- Keep local Dify DSL YAML import as the stable supported path.
+- Treat Dify console APIs as internal, version-sensitive, and not stable public APIs.
+- Require any future implementation to be experimental and hidden behind a feature flag.
+- Require a Dify Cloud + self-hosted smoke matrix before any user-facing release.
+
+Non-goals:
+
+- Dify app runtime API calls.
+- Chat, completion, or workflow-run calls.
+- Dify publish or write-back.
+- Dify app mutation.
+- Dataset, plugin, file, or resource fetching.
+- Secret export.
+- Raw DSL persistence.
+
 ## v0.7.0+ - Planned: Execution Logs and Observability Analysis
 
 Possible later scope:

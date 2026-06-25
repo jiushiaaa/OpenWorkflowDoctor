@@ -4,7 +4,7 @@ Local-first Workflow Review IDE for existing n8n workflows.
 
 OpenWorkflowDoctor reviews workflows. It does not run them.
 
-Current freeze candidate: `v0.6.0` Dify DSL YAML Import.
+Current freeze candidate: `v0.6.0` Dify DSL YAML Import. v0.6.1 feasibility notes defer Dify read-only import exploration behind a future experimental flag.
 
 It is not a workflow builder, workflow runtime, automatic n8n fixer, or production n8n mutator.
 
@@ -132,6 +132,7 @@ Out of scope for the current MVP:
 | v0.5.1 | Frozen | Real n8n import polish, CORS/proxy hardening, and manual smoke checklist. |
 | v0.5.2 | Frozen | Onboarding, Docker Compose local deployment, demo mode, troubleshooting, and reset polish. |
 | v0.6.0 | Current freeze candidate | Dify DSL YAML Import. Import only, no Dify API, no execution, no publish, and no write-back. |
+| v0.6.1 | Deferred notes | Dify read-only import feasibility only. No shipped Dify API connection or user-facing import surface. |
 
 The current product definition through v0.6.0:
 
@@ -152,7 +153,7 @@ n8n JSON
   -> human accept / hold / reject
 ```
 
-For read-only n8n import details, see [v0.5 Read-only n8n Import](docs/n8n-readonly-import.md). For Dify YAML import details, see [v0.6 Dify DSL Import](docs/dify-dsl-import.md). For real-instance validation, see [Real n8n Import Smoke Test](docs/real-n8n-import-smoke-test.md). For public demo readiness, see [Public Demo Checklist](docs/public-demo-checklist.md).
+For read-only n8n import details, see [v0.5 Read-only n8n Import](docs/n8n-readonly-import.md). For Dify YAML import details, see [v0.6 Dify DSL Import](docs/dify-dsl-import.md). For deferred Dify read-only import analysis, see [v0.6.1 Dify Read-only Import Feasibility](docs/dify-readonly-import-feasibility.md). For real-instance validation, see [Real n8n Import Smoke Test](docs/real-n8n-import-smoke-test.md). For public demo readiness, see [Public Demo Checklist](docs/public-demo-checklist.md).
 
 Core rules:
 
@@ -213,6 +214,7 @@ npm audit
 - [Provider presets and compatibility](docs/provider-presets-compatibility.md)
 - [Read-only n8n import](docs/n8n-readonly-import.md)
 - [Dify DSL import](docs/dify-dsl-import.md)
+- [Dify read-only import feasibility](docs/dify-readonly-import-feasibility.md)
 - [Real n8n Import Smoke Test](docs/real-n8n-import-smoke-test.md)
 - [Manual AI Patch Proposal smoke test](docs/manual-ai-patch-smoke-test.md)
 - [Real-model smoke results v0.4.2](docs/real-model-smoke-results-v0.4.2.md)
