@@ -1,6 +1,7 @@
 import {
   createDoctorReportFromWorkflow,
   createDoctorReviewPacket,
+  importCozeDefinitionWorkflow,
   importDifyDslWorkflow,
   parseN8nWorkflow
 } from "@openworkflowdoctor/workflow-ir";
@@ -400,6 +401,86 @@ workflow:
     expect(serialized).not.toContain("SECRET_DIFY_UPLOAD_FILE_ID_SHOULD_NOT_LEAK");
     expect(serialized).not.toContain("SECRET_DIFY_AUTH_HEADER_SHOULD_NOT_LEAK");
     expect(serialized).not.toContain("SECRET_DIFY_SIGNED_URL_SHOULD_NOT_LEAK");
+  });
+
+  test("creates Coze definition workflow documents with sanitized source metadata and review packets", () => {
+    const imported = importCozeDefinitionWorkflow({
+      fileName: "coze-support.json",
+      content: JSON.stringify({
+        name: "Coze Support Review",
+        nodes: [
+          {
+            id: "start",
+            type: "1",
+            data: { nodeMeta: { title: "Start" } }
+          },
+          {
+            id: "plugin",
+            type: "4",
+            data: {
+              nodeMeta: { title: "Call CRM" },
+              inputs: {
+                pluginFrom: {
+                  plugin_id: "SECRET_COZE_PLUGIN_ID_SHOULD_NOT_LEAK"
+                },
+                headers: {
+                  Authorization: "Bearer SECRET_COZE_TOKEN_SHOULD_NOT_LEAK"
+                }
+              }
+            }
+          },
+          {
+            id: "end",
+            type: "2",
+            data: { nodeMeta: { title: "End" } }
+          }
+        ],
+        edges: [
+          {
+            sourceNodeID: "start",
+            targetNodeID: "plugin",
+            sourcePortID: "main",
+            targetPortID: "input"
+          },
+          {
+            sourceNodeID: "plugin",
+            targetNodeID: "end",
+            sourcePortID: "main",
+            targetPortID: "input"
+          }
+        ]
+      })
+    });
+    const document = createWorkflowDocumentFromWorkflowIr({
+      workflow: imported.workflow,
+      sourceKind: "coze-definition",
+      sourceLabel: "coze-support.json",
+      sourceMetadata: imported.metadata
+    });
+    const report = createDoctorReportFromWorkflow(document.originalWorkflowIr, "检查 Coze");
+    const artifact = createReviewPacketArtifact({
+      workflowDocumentId: document.id,
+      packet: createDoctorReviewPacket(report)
+    });
+    const serialized = JSON.stringify({ document, artifact });
+
+    expect(document.sourceKind).toBe("coze-definition");
+    expect(document.sourceMetadata).toMatchObject({
+      sourceKind: "coze-definition",
+      sourcePlatform: "coze",
+      sourceVersion: "direct-canvas",
+      sourceLabel: "coze-support.json",
+      app: {
+        name: "Coze Support Review",
+        mode: "workflow-definition"
+      }
+    });
+    expect(serialized).toContain("[redacted]");
+    expect(serialized).not.toContain("sourceNodeID");
+    expect(serialized).not.toContain("targetNodeID");
+    expect(serialized).not.toContain("nodeMeta");
+    expect(serialized).not.toContain("SECRET_COZE_PLUGIN_ID_SHOULD_NOT_LEAK");
+    expect(serialized).not.toContain("SECRET_COZE_TOKEN_SHOULD_NOT_LEAK");
   });
 
   test("rejects raw imported workflow fields in stored workflow documents", () => {

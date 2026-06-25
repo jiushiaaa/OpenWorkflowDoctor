@@ -24,12 +24,12 @@ test("first-run onboarding completes demo mode without n8n or AI", async ({ page
   await expect(page.getByRole("dialog", { name: "First-run onboarding" })).toHaveCount(0);
 });
 
-test("workbench supports the deterministic v0.6.1 review packet demo flow", async ({ page }) => {
+test("workbench supports the deterministic v0.7.0 review packet demo flow", async ({ page }) => {
   test.setTimeout(60000);
   await page.goto("/");
 
-  await expect(page.getByText("OpenWorkflowDoctor v0.6.1").first()).toBeVisible();
-  await expect(page.getByRole("heading", { name: "本地静态审查导出的 n8n JSON" })).toBeVisible();
+  await expect(page.getByText("OpenWorkflowDoctor v0.7.0").first()).toBeVisible();
+  await expect(page.getByRole("heading", { name: "本地静态审查工作流定义" })).toBeVisible();
   const welcomeChecklist = page.getByRole("region", { name: "本次审查会产出" });
   await expect(welcomeChecklist).toBeVisible();
   await expect(welcomeChecklist.getByText("WorkflowIR 补丁预览", { exact: true })).toBeVisible();
@@ -96,7 +96,7 @@ test("workbench supports the deterministic v0.6.1 review packet demo flow", asyn
   await expect(reviewSteps.getByRole("heading", { name: "Refund Workflow" })).toBeVisible();
   await expect(reviewSteps.getByText("审查包导出状态")).toBeVisible();
   await expect(reviewSteps.getByText("未导出")).toBeVisible();
-  await expect(page.getByRole("heading", { name: "本地静态审查导出的 n8n JSON" })).toBeHidden();
+  await expect(page.getByRole("heading", { name: "本地静态审查工作流定义" })).toBeHidden();
   await expect(reviewSteps.getByText("当前视图")).toBeVisible();
   await expect(reviewSteps.getByText("原始")).toBeVisible();
   await expect(reviewSteps.locator(".primary-action")).toHaveText("运行 Doctor");
@@ -295,6 +295,30 @@ test("workbench imports a Dify DSL YAML and runs Doctor", async ({ page }) => {
   await expect(reviewConsole.getByText("Dify secret environment variable is materialized")).toBeVisible();
   await expect(reviewConsole.getByText("Dify node may perform external side effects")).toBeVisible();
   await expect(reviewConsole.getByText("Dify condition has no fallback route")).toBeVisible();
+});
+
+test("workbench imports a Coze definition JSON and runs Doctor", async ({ page }) => {
+  await page.goto("/");
+
+  await page.locator('input[type="file"]').setInputFiles(path.join(process.cwd(), "samples/coze/support-workflow.json"));
+
+  const reviewSteps = page.getByRole("complementary", { name: "审查步骤" });
+  await expect(reviewSteps.getByRole("heading", { name: "Coze Support Review" })).toBeVisible();
+  await expect(reviewSteps.getByLabel("审查目标").getByText("Coze Definition")).toBeVisible();
+  await expect(
+    reviewSteps.getByText(
+      "Imported for diagnosis only. OpenWorkflowDoctor will not connect to Coze, run, publish, fetch resources, or write back."
+    )
+  ).toBeVisible();
+  await expect(page.getByText("SECRET_COZE_SAMPLE_TOKEN_SHOULD_NOT_LEAK")).toHaveCount(0);
+  await expect(page.getByText("SECRET_COZE_SAMPLE_PLUGIN_ID_SHOULD_NOT_LEAK")).toHaveCount(0);
+
+  await reviewSteps.locator(".primary-action").click();
+
+  const reviewConsole = page.getByRole("region", { name: "Review Console" });
+  await expect(reviewConsole.getByText("Coze definition artifact is best-effort")).toBeVisible();
+  await expect(reviewConsole.getByText("Coze plugin/tool may perform external side effects")).toBeVisible();
+  await expect(reviewConsole.getByText("Coze HTTP request has no timeout")).toBeVisible();
 });
 
 test("workbench imports a workflow from read-only n8n and runs Doctor", async ({ page }) => {

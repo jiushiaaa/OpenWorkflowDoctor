@@ -108,6 +108,14 @@ export function ReviewSteps({
             <span>{t("dify.warningBody")}</span>
           </div>
         ) : null}
+        {sourceKind === "coze-definition" ? (
+          <div className="source-badge">
+            <strong>{t("explorer.cozeDefinition")}</strong>
+            <span>{sourceLabel}</span>
+            <span>{t("explorer.localReviewCopy")}</span>
+            <span>{t("coze.warningBody")}</span>
+          </div>
+        ) : null}
         {!workflowInput ? (
           <p className="side-copy">
             {t("sidebar.localStaticCopy")}

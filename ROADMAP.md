@@ -2,14 +2,14 @@
 
 OpenWorkflowDoctor is a local-first Workflow Review IDE for existing workflow artifacts. It is not a workflow builder, workflow runtime, automatic workflow fixer, or production platform connector.
 
-## Current Stable Release
+## Current Freeze Candidate
 
-`v0.6.1` is the current release line: Dify Read-only Import Feasibility Notes. It documents future Dify direct import boundaries without changing product behavior.
+`v0.7.0` is the current freeze candidate: Coze Workflow Definition JSON Import. It adds local manual Coze definition import while preserving the same review-only WorkflowIR boundary.
 
 The current product loop is:
 
 ```text
-import exported n8n workflow, read-only n8n workflow, or Dify DSL YAML
+import exported n8n workflow, read-only n8n workflow, Dify DSL YAML, or Coze definition JSON
   -> parse into secret-safe WorkflowIR
   -> run static diagnostics
   -> generate Review Packet
@@ -107,7 +107,29 @@ Non-goals:
 - Secret export.
 - Raw DSL persistence.
 
-## v0.7.0+ - Planned: Execution Logs and Observability Analysis
+## v0.7.0 - Freeze Candidate: Coze Workflow Definition Import
+
+Scope:
+
+- Manual Coze workflow definition `.json` upload.
+- Direct canvas and wrapped canvas shape detection.
+- Coze-to-WorkflowIR mapping with source metadata.
+- Secret-safe redaction before persistence, UI, AI context, and Review Packet export.
+- Coze-specific diagnostics for unstable artifacts, unknown nodes, broken edges, plugins/tools, HTTP, code, knowledge, database, subworkflow, files, conditions, loops, batches, and missing error strategy.
+- Coze source badge and diagnosis-only warning in the workbench.
+
+Non-goals:
+
+- Coze cloud direct connection.
+- Coze runtime workflow/chatflow API calls.
+- Coze workflow execution.
+- Publish or write-back to Coze.
+- Credential inspection or resolution.
+- Fetching plugins, datasets, files, bots, apps, variables, workspaces, child workflows, or runtime traces.
+- Raw Coze JSON persistence.
+- Coze-importable patched workflow export.
+
+## v0.8.0+ - Planned: Execution Logs and Observability Analysis
 
 Possible later scope:
 

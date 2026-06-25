@@ -1,6 +1,6 @@
 {
   "name": "@openworkflowdoctor/workflow-ai",
-  "version": "0.6.1",
+  "version": "0.7.0",
   "private": true,
   "type": "module",
   "main": "./dist/index.js",
@@ -19,7 +19,7 @@
     "typecheck": "tsc -p tsconfig.json"
   },
   "dependencies": {
-    "@openworkflowdoctor/workflow-ir": "0.6.1",
+    "@openworkflowdoctor/workflow-ir": "0.7.0",
     "zod": "^4.4.3"
   }
 }

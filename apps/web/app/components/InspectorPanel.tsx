@@ -42,6 +42,7 @@ export function InspectorPanel({
     ? patchDiff.filter((line) => line.targetNodeId === selectedNode.id)
     : [];
   const graphContext = workflow && selectedNode ? getGraphContext(workflow, selectedNode.id) : null;
+  const source = workflow?.source;
 
   return (
     <aside className="inspector" aria-label={t("inspector.label")}>
@@ -49,6 +50,25 @@ export function InspectorPanel({
         <span>{t("inspector.title")}</span>
         <strong>{selectedNode?.label ?? t("inspector.noNode")}</strong>
       </div>
+      {source ? (
+        <section className="inspector-section">
+          <h3>{t("inspector.sourceMetadata")}</h3>
+          <KeyValue label="sourceKind" value={source.sourceKind} />
+          <KeyValue label="sourcePlatform" value={source.sourcePlatform} />
+          <KeyValue label={t("inspector.sourceArtifactShape")} value={source.sourceVersion ?? t("inspector.none")} />
+          <KeyValue label={t("toolbar.metrics.nodes")} value={String(source.nodeCount)} />
+          <KeyValue label={t("toolbar.metrics.edges")} value={String(source.edgeCount)} />
+          <KeyValue label={t("inspector.parserWarnings")} value={formatWarnings(source.parserWarnings, t)} />
+          <KeyValue
+            label={t("inspector.redactionSummary")}
+            value={formatRedactionSummary(source.redactionSummary.redactedValueCount, source.redactionSummary.redactedKeys, t)}
+          />
+          <KeyValue
+            label={t("inspector.resourceResolution")}
+            value={source.sourceKind === "coze-definition" ? t("inspector.resourceReferencesNotResolved") : t("inspector.none")}
+          />
+        </section>
+      ) : null}
       {selectedNode ? (
         <>
           <section className="inspector-section">
@@ -141,4 +161,22 @@ function getGraphContext(workflow: WorkflowIR, nodeId: string) {
     .map((edge) => nodesById.get(edge.targetNodeId) ?? edge.targetNodeId);
 
   return { incoming, outgoing };
+}
+
+function formatWarnings(warnings: string[], t: Translator): string {
+  if (warnings.length === 0) {
+    return t("inspector.none");
+  }
+
+  const preview = warnings.slice(0, 2).join(" | ");
+  return warnings.length > 2 ? `${preview} (+${warnings.length - 2})` : preview;
+}
+
+function formatRedactionSummary(count: number, keys: string[], t: Translator): string {
+  if (count === 0) {
+    return t("inspector.none");
+  }
+
+  const keyPreview = keys.slice(0, 4).join(", ");
+  return keyPreview ? `${count}: ${keyPreview}` : String(count);
 }

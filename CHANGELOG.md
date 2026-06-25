@@ -2,6 +2,19 @@
 
 All notable OpenWorkflowDoctor releases are listed here. OpenWorkflowDoctor reviews workflows; it does not run them.
 
+## v0.7.0 - Coze Workflow Definition Import
+
+- Added manual Coze workflow definition JSON import.
+- Added Coze source metadata, source badge, diagnosis-only warning, and inspector source metadata.
+- Added Coze-to-WorkflowIR mapping for known node families, unknown node diagnostics, edge/branch mapping, and composite block flattening.
+- Added Coze-specific diagnostics for unstable artifacts, broken edges, side effects, HTTP auth/timeout risk, code, knowledge, database, subworkflow, files, conditions, loops, batches, and missing error strategy.
+- Added Coze redaction before persistence, UI, AI context, and Review Packet export.
+
+Trust boundaries:
+
+- No Coze cloud connection, API call, runtime workflow/chatflow call, execution, publish, write-back, credential inspection, resource fetch, raw Coze JSON persistence, or Coze-importable patch export was added.
+- AI Patch Proposal remains WorkflowIR-only.
+
 ## v0.4.4 - Public Demo Polish
 
 - Tightened the README first screen around the core product boundary.

@@ -1,6 +1,27 @@
 # OpenWorkflowDoctor Architecture
 
-OpenWorkflowDoctor is a Workflow Reliability IDE for existing workflow artifacts. The MVP reads exported n8n workflow JSON, optional read-only n8n workflow definitions, or Dify DSL YAML, converts them into deterministic `WorkflowIR`, detects static risks, proposes structured patches, and verifies whether changes are safe to accept. It does not execute workflows, read credentials, write back to n8n or Dify, or trigger external side effects.
+OpenWorkflowDoctor is a Workflow Reliability IDE for existing workflow artifacts. The MVP reads exported n8n workflow JSON, optional read-only n8n workflow definitions, Dify DSL YAML, or Coze workflow definition JSON, converts them into deterministic `WorkflowIR`, detects static risks, proposes structured patches, and verifies whether changes are safe to accept. It does not execute workflows, read credentials, write back to n8n, Dify, or Coze, or trigger external side effects.
+
+## v0.7 Coze Workflow Definition Import Boundary
+
+v0.7 adds a manual Coze workflow definition JSON import source while preserving the existing review boundary. It is not a Coze API integration, Coze runtime integration, or Coze workflow builder.
+
+The allowed data flow is:
+
+```text
+Coze definition .json
+  -> cozeDefinitionSourceAdapter
+  -> importCozeDefinitionWorkflow
+  -> secret-safe WorkflowIR
+  -> WorkflowDocument sourceKind: coze-definition
+  -> existing Doctor report, PatchOperation preview, verifier, and Review Packet flow
+```
+
+The importer supports direct canvas objects with `nodes` and `edges`, plus wrapped `workflow_schema`, `canvas`, `schema`, `Canvas`, or `CanvasSchema` fields when the wrapped value is either an object or JSON string. Raw Coze JSON is parsed in memory and is not stored in workspace documents. The persisted document stores `WorkflowIR`, sanitized Coze source metadata, parser warnings, Coze diagnostics, and a redaction summary.
+
+Coze import does not call Coze APIs, call runtime workflow/chatflow APIs, execute workflows, publish, write back, inspect credentials, resolve credentials, fetch plugins, fetch datasets, fetch files, fetch bots/apps/variables/workspaces, fetch child workflows, fetch runtime traces, or export patched Coze JSON.
+
+Review Packets record safe Coze source metadata such as `sourceKind: coze-definition`, `sourcePlatform: coze`, source artifact shape, source label, workflow/app name, node count, edge count, redaction summary, parser warnings, and diagnostics. They do not include raw Coze JSON, raw prompts, raw code, raw SQL, plugin ids, dataset ids, workflow ids, bot ids, workspace ids, signed URLs, or credentials.
 
 ## v0.6 Dify DSL Import Boundary
 
@@ -154,6 +175,8 @@ packages/
       verifier-agent.ts
 samples/
   n8n/
+  dify/
+  coze/
 ```
 
 ## Core Data Flow
@@ -170,7 +193,7 @@ n8n export JSON
   -> separate human accept / hold / reject decision
 ```
 
-Dify imports enter the same deterministic pipeline after `importDifyDslWorkflow` converts YAML to secret-safe `WorkflowIR`.
+Dify imports enter the same deterministic pipeline after `importDifyDslWorkflow` converts YAML to secret-safe `WorkflowIR`. Coze imports enter it after `importCozeDefinitionWorkflow` converts definition JSON to secret-safe `WorkflowIR`.
 
 The UI-facing deterministic entry point is `createDoctorReport(rawWorkflow, request)`. It returns the original workflow, summary, UI graph view model, diagnostics, patch proposal, readable patch diff, patched workflow, patched UI graph view model, patched diagnostics, verification report, and final acceptance recommendation.
 
@@ -200,6 +223,7 @@ Diagnostics evaluate the patched `WorkflowIR` shape, not only individual node pa
 - `types.ts`: shared IR, risk, patch, and verification report types.
 - `n8n-parser.ts`: exported n8n JSON to `WorkflowIR`.
 - `dify-dsl-import.ts`: Dify DSL YAML to secret-safe `WorkflowIR` with source metadata, redaction summary, parser warnings, and Dify-specific diagnostics.
+- `coze-definition-import.ts`: Coze workflow definition JSON to secret-safe `WorkflowIR` with source metadata, redaction summary, parser warnings, and Coze-specific diagnostics.
 - `workflow-source-adapter.ts`: minimal source adapter contract for local import sources.
 - `graph.ts`: adjacency maps and upstream/downstream graph helpers.
 - `view-model.ts`: deterministic UI graph view model with node positions, edge labels, and node risk badges.

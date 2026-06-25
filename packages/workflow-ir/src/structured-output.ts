@@ -151,7 +151,7 @@ const workflowSourceDiagnosticSchema = z.object({
 }).strict();
 
 const workflowSourceMetadataSchema = z.object({
-  sourceKind: z.enum(["n8n-json", "n8n-readonly", "dify-dsl"]),
+  sourceKind: z.enum(["n8n-json", "n8n-readonly", "dify-dsl", "coze-definition"]),
   sourcePlatform: z.string().min(1),
   sourceVersion: z.string().min(1).optional(),
   sourceAppMode: z.string().min(1).optional(),

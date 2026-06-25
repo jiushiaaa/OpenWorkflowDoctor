@@ -1,0 +1,123 @@
+{
+  "name": "Coze Support Review",
+  "nodes": [
+    {
+      "id": "start",
+      "type": "1",
+      "data": {
+        "nodeMeta": {
+          "title": "Start"
+        }
+      }
+    },
+    {
+      "id": "llm",
+      "type": "3",
+      "data": {
+        "nodeMeta": {
+          "title": "Draft Answer"
+        },
+        "inputs": {
+          "llmParam": [
+            {
+              "name": "systemPrompt",
+              "input": {
+                "type": "string",
+                "value": {
+                  "type": "literal",
+                  "content": "SECRET_COZE_SAMPLE_PROMPT_SHOULD_NOT_LEAK"
+                }
+              }
+            }
+          ],
+          "settingOnError": {
+            "switch": true,
+            "processType": 3,
+            "timeoutMs": 30000,
+            "retryTimes": 1
+          }
+        }
+      }
+    },
+    {
+      "id": "plugin",
+      "type": "4",
+      "data": {
+        "nodeMeta": {
+          "title": "Lookup CRM"
+        },
+        "inputs": {
+          "pluginFrom": {
+            "plugin_id": "SECRET_COZE_SAMPLE_PLUGIN_ID_SHOULD_NOT_LEAK",
+            "api_id": "SECRET_COZE_SAMPLE_API_ID_SHOULD_NOT_LEAK"
+          },
+          "headers": {
+            "Authorization": "Bearer SECRET_COZE_SAMPLE_TOKEN_SHOULD_NOT_LEAK"
+          }
+        }
+      }
+    },
+    {
+      "id": "http",
+      "type": "45",
+      "data": {
+        "nodeMeta": {
+          "title": "Notify Ticket System"
+        },
+        "inputs": {
+          "apiInfo": {
+            "method": "POST",
+            "url": "https://api.example.test/ticket?signature=SECRET_COZE_SAMPLE_SIGNED_URL_SHOULD_NOT_LEAK"
+          },
+          "headers": [
+            {
+              "name": "X-API-Key",
+              "input": {
+                "type": "string",
+                "value": {
+                  "type": "literal",
+                  "content": "SECRET_COZE_SAMPLE_API_KEY_SHOULD_NOT_LEAK"
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "end",
+      "type": "2",
+      "data": {
+        "nodeMeta": {
+          "title": "End"
+        }
+      }
+    }
+  ],
+  "edges": [
+    {
+      "sourceNodeID": "start",
+      "targetNodeID": "llm",
+      "sourcePortID": "main",
+      "targetPortID": "input"
+    },
+    {
+      "sourceNodeID": "llm",
+      "targetNodeID": "plugin",
+      "sourcePortID": "main",
+      "targetPortID": "input"
+    },
+    {
+      "sourceNodeID": "plugin",
+      "targetNodeID": "http",
+      "sourcePortID": "main",
+      "targetPortID": "input"
+    },
+    {
+      "sourceNodeID": "http",
+      "targetNodeID": "end",
+      "sourcePortID": "main",
+      "targetPortID": "input"
+    }
+  ]
+}

@@ -27,7 +27,7 @@ export type CredentialReferenceSummary = {
   credentialCount: number;
 };
 
-export type WorkflowSourceKind = "n8n-json" | "n8n-readonly" | "dify-dsl";
+export type WorkflowSourceKind = "n8n-json" | "n8n-readonly" | "dify-dsl" | "coze-definition";
 
 export type RedactionSummary = {
   redactedValueCount: number;

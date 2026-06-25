@@ -10,7 +10,13 @@ import type {
 import { aiPatchProposalCandidateSchema } from "@openworkflowdoctor/workflow-ir";
 import { z } from "zod";
 
-export type WorkflowDocumentSourceKind = "imported-file" | "sample" | "migrated-v0.2" | "n8n-readonly" | "dify-dsl";
+export type WorkflowDocumentSourceKind =
+  | "imported-file"
+  | "sample"
+  | "migrated-v0.2"
+  | "n8n-readonly"
+  | "dify-dsl"
+  | "coze-definition";
 export type LatestReportState = "not-run" | "ready" | "stale";
 export type ReviewMode = "original" | "patched";
 export type WorkspaceConsoleTab = "summary" | "risks" | "ai" | "patch" | "verification" | "packet" | "logs";
@@ -147,7 +153,14 @@ const humanReviewDecisionSchema = z.enum(["undecided", "accepted", "held", "reje
 const latestReportStateSchema = z.enum(["not-run", "ready", "stale"]);
 const reviewModeSchema = z.enum(["original", "patched"]);
 const workspaceConsoleTabSchema = z.enum(["summary", "risks", "ai", "patch", "verification", "packet", "logs"]);
-const sourceKindSchema = z.enum(["imported-file", "sample", "migrated-v0.2", "n8n-readonly", "dify-dsl"]);
+const sourceKindSchema = z.enum([
+  "imported-file",
+  "sample",
+  "migrated-v0.2",
+  "n8n-readonly",
+  "dify-dsl",
+  "coze-definition"
+]);
 const nodeTypeFamilySchema = z.enum(["known", "unknown"]);
 const parameterValueTypeSchema = z.enum(["array", "boolean", "null", "number", "object", "string", "unknown"]);
 const aiPatchProposalStateStatusSchema = z.enum([
@@ -201,7 +214,7 @@ const workflowSourceDiagnosticSchema = z.object({
 }).strict();
 
 const workflowSourceMetadataSchema = z.object({
-  sourceKind: z.enum(["n8n-json", "n8n-readonly", "dify-dsl"]),
+  sourceKind: z.enum(["n8n-json", "n8n-readonly", "dify-dsl", "coze-definition"]),
   sourcePlatform: z.string().min(1),
   sourceVersion: z.string().min(1).optional(),
   sourceAppMode: z.string().min(1).optional(),

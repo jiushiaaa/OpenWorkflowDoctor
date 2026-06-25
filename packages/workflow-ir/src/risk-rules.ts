@@ -17,6 +17,9 @@ export function diagnoseWorkflow(workflow: WorkflowIR): RiskIssue[] {
   if (workflow.source?.sourceKind === "dify-dsl") {
     issues.push(...diagnoseDifyWorkflow(workflow));
   }
+  if (workflow.source?.sourceKind === "coze-definition") {
+    issues.push(...diagnoseCozeWorkflow(workflow));
+  }
 
   for (const node of getIsolatedNodes(workflow)) {
     issues.push(
@@ -268,6 +271,193 @@ function diagnoseDifyWorkflow(workflow: WorkflowIR): RiskIssue[] {
   return issues;
 }
 
+function diagnoseCozeWorkflow(workflow: WorkflowIR): RiskIssue[] {
+  const issues: RiskIssue[] = [];
+  const sourceDiagnostics = workflow.source?.diagnostics ?? [];
+
+  for (const diagnostic of sourceDiagnostics) {
+    issues.push({
+      id: createCozeDiagnosticIssueId(diagnostic.code, diagnostic.nodeId, diagnostic.evidence),
+      severity: diagnostic.severity,
+      ...(diagnostic.nodeId ? { nodeId: diagnostic.nodeId } : {}),
+      title: createCozeDiagnosticTitle(diagnostic.code),
+      explanation: diagnostic.message,
+      suggestedFix: createCozeDiagnosticFix(diagnostic.code),
+      evidence: diagnostic.evidence
+    });
+  }
+
+  if (!workflow.nodes.some((node) => node.type === "coze.start")) {
+    issues.push(createWorkflowIssue("coze_missing_start_node", "high", "Missing Coze start node", "This Coze workflow definition has no start node in WorkflowIR.", "Add or restore a Coze start node before relying on this flow.", ["No coze.start node found"]));
+  }
+
+  if (!workflow.nodes.some((node) => node.type === "coze.end" || node.type === "coze.output")) {
+    issues.push(createWorkflowIssue("coze_missing_end_node", "high", "Missing Coze end node", "This Coze workflow definition has no end or output node in WorkflowIR.", "Add a clear Coze end/output path.", ["No coze.end or coze.output node found"]));
+  }
+
+  for (const node of workflow.nodes) {
+    if (node.type === "coze.plugin") {
+      issues.push(
+        createNodeIssue("coze_plugin_side_effect", {
+          node,
+          severity: "high",
+          title: "Coze plugin/tool may perform external side effects",
+          explanation: "Plugin and tool nodes may call external systems if executed in Coze.",
+          suggestedFix: "Review this node manually and add idempotency, timeout, and fallback behavior in the source workflow.",
+          evidence: [`Node type: ${node.type}`]
+        })
+      );
+    }
+
+    if (node.type === "coze.http" && !hasParameterLike(node, ["timeout"])) {
+      issues.push(
+        createNodeIssue("coze_http_without_timeout", {
+          node,
+          severity: "medium",
+          title: "Coze HTTP request has no timeout",
+          explanation: "A Coze HTTP request without an explicit timeout can hang the workflow path.",
+          suggestedFix: "Set an explicit timeout and add a fallback/error strategy in the source Coze workflow.",
+          evidence: [`Parameters: ${parameterKeys(node).join(", ") || "none"}`]
+        })
+      );
+    }
+
+    if (node.type === "coze.http" && hasParameterKeyOrPreviewLike(node, ["authMaterialized", "authorization", "x-api-key", "bearer"])) {
+      issues.push(
+        createNodeIssue("coze_http_auth_materialized", {
+          node,
+          severity: "high",
+          title: "Coze HTTP auth appears materialized",
+          explanation: "This HTTP node appears to contain authentication material in the imported definition.",
+          suggestedFix: "Move credentials into Coze-managed secrets or credentials and re-import a secret-safe definition.",
+          evidence: node.parameters.map((parameter) => `${parameter.key}: ${parameter.preview}`)
+        })
+      );
+    }
+
+    if (node.type === "coze.code") {
+      issues.push(
+        createNodeIssue("coze_code_node_present", {
+          node,
+          severity: "medium",
+          title: "Coze code node requires review",
+          explanation: "Code nodes can hide complex behavior that static graph checks cannot fully verify.",
+          suggestedFix: "Review code logic manually before accepting workflow changes.",
+          evidence: [`Node name: ${node.name}`]
+        })
+      );
+
+      if (hasParameterKeyOrPreviewLike(node, ["codeRiskSignals", "network", "filesystem", "dynamic-code", "secret-reference"])) {
+        issues.push(
+          createNodeIssue("coze_code_unsafe_reference", {
+            node,
+            severity: "high",
+            title: "Coze code node references unsafe capability",
+            explanation: "The code node appears to reference network, filesystem, dynamic code, token, or secret-related behavior.",
+            suggestedFix: "Manually inspect the source code and isolate side effects behind explicit review paths.",
+            evidence: node.parameters.map((parameter) => `${parameter.key}: ${parameter.preview}`)
+          })
+        );
+      }
+    }
+
+    if (node.type.startsWith("coze.knowledge") && hasParameterKeyOrPreviewLike(node, ["knowledgeReferencePresent", "dataset", "knowledge"])) {
+      issues.push(
+        createNodeIssue("coze_knowledge_external_reference", {
+          node,
+          severity: "medium",
+          title: "Coze knowledge node references external resources",
+          explanation: "Knowledge nodes may depend on Coze datasets that OpenWorkflowDoctor does not fetch or verify.",
+          suggestedFix: "Confirm referenced datasets exist and are safe in the destination Coze workspace.",
+          evidence: node.parameters.map((parameter) => `${parameter.key}: ${parameter.preview}`)
+        })
+      );
+    }
+
+    if (node.type === "coze.subworkflow") {
+      issues.push(
+        createNodeIssue("coze_subworkflow_unresolved", {
+          node,
+          severity: "medium",
+          title: "Coze sub-workflow is unresolved",
+          explanation: "This sub-workflow reference is not fetched or verified in v0.7.",
+          suggestedFix: "Manually review the child workflow definition before accepting changes.",
+          evidence: node.parameters.map((parameter) => `${parameter.key}: ${parameter.preview}`)
+        })
+      );
+    }
+
+    if (node.type.startsWith("coze.database.") && node.type !== "coze.database.query") {
+      issues.push(
+        createNodeIssue("coze_database_mutation", {
+          node,
+          severity: "high",
+          title: "Coze database node may mutate state",
+          explanation: "This Coze database node appears to insert, update, delete, or run custom SQL.",
+          suggestedFix: "Add explicit review, idempotency, and fallback behavior around this database mutation.",
+          evidence: [`Node type: ${node.type}`]
+        })
+      );
+    }
+
+    if (hasParameterKeyOrPreviewLike(node, ["fileReferencePresent", "file", "upload", "image"])) {
+      issues.push(
+        createNodeIssue("coze_file_reference", {
+          node,
+          severity: "medium",
+          title: "Coze node references file resources",
+          explanation: "The imported definition references files or uploaded assets that OpenWorkflowDoctor does not fetch.",
+          suggestedFix: "Confirm required files exist and are safe in the destination Coze workspace.",
+          evidence: node.parameters.map((parameter) => `${parameter.key}: ${parameter.preview}`)
+        })
+      );
+    }
+
+    if (isCozeConditionNode(node) && !hasCozeFallbackRoute(workflow, node.id)) {
+      issues.push(
+        createNodeIssue("coze_condition_without_fallback", {
+          node,
+          severity: "medium",
+          title: "Coze condition has no fallback route",
+          explanation: "This Coze condition/selector node does not expose an obvious default, false, else, or fallback route.",
+          suggestedFix: "Add a fallback/default branch or confirm all cases are intentionally terminal.",
+          evidence: workflow.edges
+            .filter((edge) => edge.sourceNodeId === node.id)
+            .map((edge) => `${edge.sourceOutput}[${edge.sourceOutputIndex}] -> ${edge.targetNodeId}`)
+        })
+      );
+    }
+
+    if ((node.type === "coze.batch" || node.type === "coze.loop") && !hasParameterLike(node, ["reviewed"])) {
+      issues.push(
+        createNodeIssue("coze_batch_or_loop_requires_review", {
+          node,
+          severity: "medium",
+          title: "Coze batch or loop requires manual review",
+          explanation: "Batch and loop nodes can multiply downstream side effects.",
+          suggestedFix: "Review loop bounds, batch sizes, and downstream side effects manually.",
+          evidence: [`Node type: ${node.type}`]
+        })
+      );
+    }
+
+    if (isCozeHighRiskNode(node) && !hasParameterLike(node, ["errorStrategyPresent"]) && !hasErrorBranch(workflow, node.id)) {
+      issues.push(
+        createNodeIssue("coze_error_strategy_missing", {
+          node,
+          severity: "high",
+          title: "Coze high-risk node lacks explicit error strategy",
+          explanation: "This high-risk Coze node has no imported error strategy or explicit error branch.",
+          suggestedFix: "Add Coze exception handling or an explicit fallback branch.",
+          evidence: [`Node type: ${node.type}`]
+        })
+      );
+    }
+  }
+
+  return issues;
+}
+
 function createNodeIssue(ruleId: string, input: RiskFactoryInput): RiskIssue {
   return {
     id: `${ruleId}:${input.node.id}`,
@@ -344,6 +534,47 @@ function createDifyDiagnosticFix(code: string): string {
       return "Import only workflow, chatflow, or advanced-chat Dify apps for v0.6.";
     default:
       return "Review the source Dify DSL and re-export a valid workflow.";
+  }
+}
+
+function createCozeDiagnosticIssueId(code: string, nodeId: string | undefined, evidence: string[]): string {
+  if (code === "coze_broken_edge") {
+    const source = evidence.find((item) => item.startsWith("Source: "))?.replace("Source: ", "") || "unknown";
+    const target = evidence.find((item) => item.startsWith("Target: "))?.replace("Target: ", "") || "unknown";
+    return `${code}:${source}:${target}`;
+  }
+  return nodeId ? `${code}:${nodeId}` : code;
+}
+
+function createCozeDiagnosticTitle(code: string): string {
+  switch (code) {
+    case "coze_definition_unstable_artifact":
+      return "Coze definition artifact is best-effort";
+    case "coze_missing_node_id":
+      return "Coze node is missing id";
+    case "coze_duplicate_node_id":
+      return "Coze node id is duplicated";
+    case "coze_unknown_node_type":
+      return "Coze node type is unknown";
+    case "coze_broken_edge":
+      return "Coze edge references an unknown node";
+    case "coze_nested_block_depth_exceeded":
+      return "Coze nested block depth exceeds guardrail";
+    default:
+      return "Coze import warning";
+  }
+}
+
+function createCozeDiagnosticFix(code: string): string {
+  switch (code) {
+    case "coze_definition_unstable_artifact":
+      return "Review the imported definition manually because v0.7 supports manual best-effort Coze JSON only.";
+    case "coze_broken_edge":
+      return "Reconnect or remove the broken edge in the Coze workflow.";
+    case "coze_nested_block_depth_exceeded":
+      return "Reduce composite nesting or review the skipped nested blocks manually.";
+    default:
+      return "Review the source Coze definition and re-export a valid workflow definition.";
   }
 }
 
@@ -501,11 +732,31 @@ function isDifyConditionNode(node: NodeIR): boolean {
   return node.type.startsWith("dify.condition.");
 }
 
+function isCozeConditionNode(node: NodeIR): boolean {
+  return node.type === "coze.condition.selector";
+}
+
 function hasDifyFallbackRoute(workflow: WorkflowIR, nodeId: string): boolean {
   const outputs = workflow.edges
     .filter((edge) => edge.sourceNodeId === nodeId)
     .map((edge) => edge.sourceOutput.toLowerCase());
   return outputs.some((output) => ["default", "fallback", "false", "else"].includes(output));
+}
+
+function hasCozeFallbackRoute(workflow: WorkflowIR, nodeId: string): boolean {
+  const outputs = workflow.edges
+    .filter((edge) => edge.sourceNodeId === nodeId)
+    .map((edge) => edge.sourceOutput.toLowerCase());
+  return outputs.some((output) => ["default", "fallback", "false", "else"].includes(output));
+}
+
+function isCozeHighRiskNode(node: NodeIR): boolean {
+  return (
+    node.type === "coze.plugin" ||
+    node.type === "coze.http" ||
+    node.type === "coze.subworkflow" ||
+    (node.type.startsWith("coze.database.") && node.type !== "coze.database.query")
+  );
 }
 
 function includesAnyNodeIdentity(node: NodeIR, needles: string[]): boolean {

@@ -1,5 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { createDoctorReportFromWorkflow, difyDslSourceAdapter, importDifyDslWorkflow, parseN8nWorkflow } from "@openworkflowdoctor/workflow-ir";
+import {
+  cozeDefinitionSourceAdapter,
+  createDoctorReportFromWorkflow,
+  difyDslSourceAdapter,
+  importCozeDefinitionWorkflow,
+  importDifyDslWorkflow,
+  parseN8nWorkflow
+} from "@openworkflowdoctor/workflow-ir";
 import type { SampleWorkflowCatalogItem } from "../lib/sample-workflows";
 import {
   createIndexedDbWorkspaceRepository,
@@ -84,12 +91,18 @@ export function useWorkspaceController({ onWorkspaceChanged }: { onWorkspaceChan
             content: text
           })
         : null;
-      const parsedWorkflow = importedDify?.workflow ?? parseN8nWorkflow(JSON.parse(text) as unknown);
+      const importedCoze = importedDify ? null : tryImportCozeDefinition({
+        fileName: file.name,
+        mimeType: file.type,
+        content: text
+      });
+      const parsedWorkflow = importedDify?.workflow ?? importedCoze?.workflow ?? parseN8nWorkflow(JSON.parse(text) as unknown);
       const document = createWorkflowDocumentFromWorkflowIr({
         workflow: parsedWorkflow,
-        sourceKind: importedDify ? "dify-dsl" : "imported-file",
+        sourceKind: importedDify ? "dify-dsl" : importedCoze ? "coze-definition" : "imported-file",
         sourceLabel: file.name,
-        ...(importedDify ? { sourceMetadata: importedDify.metadata } : {})
+        ...(importedDify ? { sourceMetadata: importedDify.metadata } : {}),
+        ...(importedCoze ? { sourceMetadata: importedCoze.metadata } : {})
       });
 
       await repository.saveWorkflowDocument(document);
@@ -285,4 +298,19 @@ export function useWorkspaceController({ onWorkspaceChanged }: { onWorkspaceChan
     saveReviewPacketArtifact,
     clearWorkspaceData
   };
+}
+
+function tryImportCozeDefinition(input: { fileName: string; mimeType?: string; content: string }) {
+  if (!cozeDefinitionSourceAdapter.acceptsFile(input.fileName, input.mimeType)) {
+    return null;
+  }
+
+  try {
+    return importCozeDefinitionWorkflow(input);
+  } catch (error) {
+    if (error instanceof Error && error.message === "Coze definition JSON must include nodes and edges arrays.") {
+      return null;
+    }
+    throw error;
+  }
 }

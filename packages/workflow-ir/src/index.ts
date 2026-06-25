@@ -1,4 +1,5 @@
 export * from "./ai-patch-proposal.js";
+export * from "./coze-definition-import.js";
 export * from "./doctor-report.js";
 export * from "./dify-dsl-import.js";
 export * from "./graph.js";

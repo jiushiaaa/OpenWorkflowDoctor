@@ -10,7 +10,7 @@ describe("workbench i18n", () => {
 
   test("falls back to zh-CN for unsupported languages", () => {
     expect(resolveLanguage("fr-FR")).toBe("zh-CN");
-    expect(createTranslator("fr-FR")("empty.title")).toBe("本地静态审查导出的 n8n JSON");
+    expect(createTranslator("fr-FR")("empty.title")).toBe("本地静态审查工作流定义");
   });
 
   test("returns en-US copy when requested", () => {
@@ -18,7 +18,7 @@ describe("workbench i18n", () => {
   });
 
   test("keeps public app version label aligned with current stable release", () => {
-    expect(createTranslator("zh-CN")("app.version")).toBe("OpenWorkflowDoctor v0.6.1");
-    expect(createTranslator("en-US")("app.version")).toBe("OpenWorkflowDoctor v0.6.1");
+    expect(createTranslator("zh-CN")("app.version")).toBe("OpenWorkflowDoctor v0.7.0");
+    expect(createTranslator("en-US")("app.version")).toBe("OpenWorkflowDoctor v0.7.0");
   });
 });
