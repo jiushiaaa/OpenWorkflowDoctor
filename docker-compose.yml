@@ -1,0 +1,11 @@
+services:
+  openworkflowdoctor:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "127.0.0.1:${OPENWORKFLOWDOCTOR_APP_PORT:-3000}:3000"
+    environment:
+      NODE_ENV: production
+      NEXT_TELEMETRY_DISABLED: "1"
+      NEXT_PUBLIC_OPENWORKFLOWDOCTOR_DEMO_MODE: "${NEXT_PUBLIC_OPENWORKFLOWDOCTOR_DEMO_MODE:-true}"

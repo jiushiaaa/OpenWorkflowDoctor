@@ -1,46 +1,50 @@
-# OpenWorkflowDoctor v0.4.4 Demo Script
+# OpenWorkflowDoctor v0.5.2 Demo Script
 
-Target length: 3 minutes.
+Target length: 4 minutes.
 
 ## Setup
 
-Run:
+Recommended public path:
 
 ```bash
-npx next dev apps/web -p 3001
+docker compose up
 ```
 
-Open `http://localhost:3001`.
+Open `http://localhost:3000`.
+
+Contributor path:
+
+```bash
+npm install
+npm run dev -w apps/web
+```
 
 ## Talk Track
 
 1. Start with the boundary.
-   OpenWorkflowDoctor is a local-first Workflow Review IDE. It reviews workflows; it does not run them, connect to production n8n, read credentials, write back to n8n, or export n8n-importable patches.
+   OpenWorkflowDoctor is a local-first Workflow Reliability IDE. It reviews workflows; it does not run them, read credentials, write back to n8n, sync to cloud, or export n8n-importable patches.
 
-2. Import a sample.
-   Use `samples/n8n/refund-workflow.json` or load the bundled refund sample. Point out that local exported n8n JSON is parsed into secret-safe WorkflowIR before review.
+2. Use first-run onboarding.
+   Show Demo mode and Connect n8n read-only. Read the trust checklist before importing anything real.
 
-3. Run Doctor.
-   Click `Run Doctor`. Show the workflow graph, risk badges, risk list, summary, and node inspector.
+3. Start Demo mode.
+   Load the bundled sample and show that Doctor diagnostics and the Review Console work without n8n and without AI.
 
-4. Explain deterministic review.
-   Show the deterministic patch preview and readable diff. Say clearly that the preview uses structured WorkflowIR operations and does not mutate raw n8n JSON.
+4. Show troubleshooting.
+   Open Settings. Point out n8n checks, AI provider checks, masked API key state, and diagnostics-only fallback.
 
-5. Show provider presets.
-   Open Settings. Show the provider dropdown, the Verified / Preset / Experimental / Custom tiers, and the transport / response format fields. Mention that NovAI, Volcengine Ark, and Alibaba Bailian / DashScope have passed the real-model `normal_timeout_repair` smoke path.
+5. Explain read-only n8n import.
+   Configure an n8n base URL and session-only key only if a safe test instance is available. List workflows, import one as a local review copy, and mention `excludePinnedData=true`.
 
-6. Explain AI Patch Proposal.
-   Open the patch tab. Show that AI can only propose reviewable PatchOperation candidates. If no API key is configured, show the safe unavailable state. If a provider is configured, show that generated AI output still goes through Zod validation, semantic validation, conflict detection, deterministic patch preview, Verifier, and Human Review.
+6. Show deterministic review.
+   Inspect the workflow graph, risk list, structured WorkflowIR patch preview, Verifier, and Human Review checklist.
 
-7. Apply reviewed preview.
-   Click `Preview Patch IR` or `Preview AI Patch` only after inspecting operations. Show the patched graph/risk view, verifier report, acceptance checklist, issue delta, and target fingerprint.
+7. Explain AI Patch Proposal.
+   AI can propose reviewable PatchOperation candidates only. Deterministic validation, Verifier, and Human Review remain required.
 
-8. Show human review.
-   Point out that Accept is gated by checklist confirmations. Confirm required items, then show that human review is recorded separately from verifier guidance.
-
-9. Export review packet.
-   Click `Export Review Packet`. Describe it as a handoff artifact for human approval and audit, not proof of runtime safety.
+8. Show reset.
+   Open reset confirmation and point out exactly what local data will be removed and what stays.
 
 ## Close
 
-The v0.4.4 thesis: AI can help explain and propose constrained structured changes, but deterministic validation, Verifier, and Human Review remain required. Completion is not delivery.
+The v0.5.2 thesis: first-time users can try, configure, troubleshoot, and reset the local app without weakening the read-only import and review-only AI boundaries.

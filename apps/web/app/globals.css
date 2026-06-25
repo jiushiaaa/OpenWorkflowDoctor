@@ -1315,6 +1315,79 @@ h3 {
   box-shadow: 0 24px 70px rgba(15, 23, 42, 0.28);
 }
 
+.onboarding-panel {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  z-index: 60;
+  width: min(420px, calc(100vw - 32px));
+  max-height: calc(100vh - 32px);
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  overflow: auto;
+  background: var(--surface);
+  box-shadow: 0 22px 60px rgba(15, 23, 42, 0.22);
+}
+
+.onboarding-panel header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border-bottom: 1px solid var(--border);
+  padding: 12px;
+  background: var(--surface-subtle);
+}
+
+.onboarding-panel header span {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.onboarding-panel header button,
+.onboarding-actions button,
+.onboarding-panel footer button {
+  min-height: 32px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0 10px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.onboarding-body {
+  display: grid;
+  gap: 12px;
+  padding: 12px;
+}
+
+.onboarding-body section {
+  display: grid;
+  gap: 8px;
+}
+
+.onboarding-actions {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+}
+
+.onboarding-actions button:first-child {
+  border-color: var(--surface-strong);
+  background: var(--surface-strong);
+  color: #ffffff;
+}
+
+.onboarding-panel footer {
+  display: flex;
+  justify-content: flex-end;
+}
+
 .settings-modal > header {
   display: flex;
   align-items: center;
@@ -1515,6 +1588,73 @@ h3 {
   background: var(--surface-subtle);
   font-size: 13px;
   font-weight: 750;
+}
+
+.troubleshooting-panel {
+  display: grid;
+  gap: 8px;
+  border-top: 1px solid var(--border);
+  padding-top: 10px;
+}
+
+.troubleshooting-panel h4 {
+  margin: 0;
+  font-size: 12px;
+}
+
+.troubleshooting-panel ul {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.troubleshooting-check {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 4px 8px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  padding: 8px;
+  background: var(--surface-subtle);
+}
+
+.troubleshooting-check strong,
+.troubleshooting-check span {
+  font-size: 12px;
+}
+
+.troubleshooting-check span {
+  border-radius: 999px;
+  padding: 2px 7px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.troubleshooting-check p,
+.troubleshooting-check small {
+  grid-column: 1 / -1;
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.troubleshooting-check--pass span {
+  background: #dcfce7;
+  color: var(--pass);
+}
+
+.troubleshooting-check--hold span,
+.troubleshooting-check--pending span {
+  background: #fef3c7;
+  color: var(--hold);
+}
+
+.troubleshooting-check--fail span {
+  background: #fee4e2;
+  color: var(--fail);
 }
 
 [data-theme="dark"] .severity--critical,

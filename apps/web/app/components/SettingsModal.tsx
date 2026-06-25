@@ -7,6 +7,8 @@ import {
   type WorkbenchSettings
 } from "../lib/settings";
 import type { N8nConnectionSettings, SaveN8nConnectionInput } from "../lib/n8n-connections";
+import type { TroubleshootingCheck } from "../lib/troubleshooting";
+import { TroubleshootingPanel } from "./TroubleshootingPanel";
 import { getSettingsTestStatusLabel, KeyValue, type SettingsTestStatus } from "./workbench-shared";
 
 const providerPresets = listProviderPresets();
@@ -28,6 +30,11 @@ export function SettingsModal({
   onDeleteN8nConnection,
   onClearN8nSessionKey,
   onClearWorkspaceData,
+  onTestN8nConnection,
+  onOpenOnboarding,
+  onResetEntireWorkspace,
+  n8nTroubleshootingChecks,
+  aiTroubleshootingChecks,
   onClose
 }: {
   settings: WorkbenchSettings;
@@ -46,6 +53,11 @@ export function SettingsModal({
   onDeleteN8nConnection: (connectionId: string) => void;
   onClearN8nSessionKey: (connectionId: string) => void;
   onClearWorkspaceData: () => void;
+  onTestN8nConnection: () => void;
+  onOpenOnboarding: () => void;
+  onResetEntireWorkspace: () => void;
+  n8nTroubleshootingChecks: TroubleshootingCheck[];
+  aiTroubleshootingChecks: TroubleshootingCheck[];
   onClose: () => void;
 }) {
   const selectedProvider = getSelectedProvider(settings.ai.providerPreset);
@@ -245,6 +257,7 @@ export function SettingsModal({
               </button>
             </div>
             <p className="settings-help">{getSettingsTestStatusLabel(testStatus, t)}</p>
+            <TroubleshootingPanel title={t("settings.aiTroubleshooting")} checks={aiTroubleshootingChecks} />
           </section>
 
           <section className="settings-section">
@@ -289,6 +302,9 @@ export function SettingsModal({
               <button type="button" onClick={onSaveN8nConnection}>
                 {t("actions.saveN8nConnection")}
               </button>
+              <button type="button" className="secondary-button" onClick={onTestN8nConnection}>
+                {t("actions.testN8nConnection")}
+              </button>
             </div>
 
             {n8nConnections.length > 0 ? (
@@ -325,6 +341,7 @@ export function SettingsModal({
             ) : (
               <p className="settings-help">{t("settings.n8nNoConnections")}</p>
             )}
+            <TroubleshootingPanel title={t("settings.n8nTroubleshooting")} checks={n8nTroubleshootingChecks} />
           </section>
 
           <section className="settings-section">
@@ -333,6 +350,12 @@ export function SettingsModal({
             <div className="settings-actions">
               <button type="button" className="secondary-button" onClick={onClearWorkspaceData}>
                 {t("actions.clearWorkspaceData")}
+              </button>
+              <button type="button" className="secondary-button" onClick={onOpenOnboarding}>
+                {t("actions.reopenOnboarding")}
+              </button>
+              <button type="button" className="secondary-button" onClick={onResetEntireWorkspace}>
+                {t("settings.resetEntireWorkspace")}
               </button>
               <button type="button" className="secondary-button" disabled>
                 {t("actions.exportWorkspace")} · {t("settings.placeholder")}

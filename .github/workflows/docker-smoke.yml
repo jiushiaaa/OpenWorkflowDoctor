@@ -1,0 +1,43 @@
+name: Docker Smoke
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  docker-smoke:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Build Docker Compose services
+        run: docker compose build
+
+      - name: Start Docker Compose services
+        run: docker compose up -d
+
+      - name: Wait for OpenWorkflowDoctor
+        run: |
+          set -euo pipefail
+          for attempt in {1..60}; do
+            if curl -fsS http://localhost:3000 > /tmp/openworkflowdoctor-root.html; then
+              break
+            fi
+            echo "Waiting for OpenWorkflowDoctor at http://localhost:3000 ($attempt/60)"
+            sleep 2
+          done
+          test -s /tmp/openworkflowdoctor-root.html
+          grep -q "OpenWorkflowDoctor" /tmp/openworkflowdoctor-root.html
+
+      - name: Print Docker diagnostics
+        if: failure()
+        run: |
+          docker compose ps
+          docker compose logs
+
+      - name: Stop Docker Compose services
+        if: always()
+        run: docker compose down -v

@@ -4,7 +4,7 @@ Local-first Workflow Review IDE for existing n8n workflows.
 
 OpenWorkflowDoctor reviews workflows. It does not run them.
 
-Current stable release: `v0.5.1` Real n8n import polish.
+Current stable release: `v0.5.2` Onboarding and local deployment polish.
 
 It is not a workflow builder, workflow runtime, automatic n8n fixer, or production n8n mutator.
 
@@ -26,21 +26,35 @@ AI can explain and propose structured `PatchOperation` candidates, but determini
 
 ![OpenWorkflowDoctor workbench](docs/assets/openworkflowdoctor-workbench-v0.4.4.png)
 
-## Demo
+## Quick Try With Docker Compose
 
-Run the local web workbench:
+Docker Compose is the recommended public try-out path:
+
+```bash
+docker compose up
+```
+
+Open `http://localhost:3000`.
+
+This starts OpenWorkflowDoctor only. It does not bundle n8n, does not require an AI provider key, and does not require an n8n connection. First-run Demo mode works with bundled sample workflows.
+
+## Developer Setup With Node
+
+Use Node setup for contribution work:
 
 ```bash
 npm install
-npx next dev apps/web -p 3001
+npm run dev -w apps/web
 ```
 
-Open `http://127.0.0.1:3001`.
+Open the URL printed by Next.js.
+
+## Demo
 
 Recommended demo flow:
 
-1. Load the bundled refund workflow sample or import `samples/n8n/refund-workflow.json`.
-2. Run Doctor with the default reliability review request.
+1. Use first-run Demo mode, load a bundled refund workflow sample, or import `samples/n8n/refund-workflow.json`.
+2. Run Doctor with the default reliability review request if the sample was not already diagnosed by onboarding.
 3. Inspect the workflow graph, static risks, deterministic patch preview, verifier gates, and human review checklist.
 4. Open Settings and review provider presets, including Verified, Preset, Experimental, and Custom tiers.
 5. Inspect the AI Patch Proposal boundary: AI can propose structured operations only, and unavailable providers fall back safely.
@@ -49,7 +63,7 @@ Recommended demo flow:
 
 The exported packet is an OpenWorkflowDoctor review artifact. It is not an n8n-importable workflow and it does not execute any side effects.
 
-For a tighter walkthrough, see [Demo Guide](docs/demo-guide.md).
+For local deployment details, see [Local Deployment](docs/local-deployment.md). For onboarding details, see [Onboarding](docs/onboarding.md). For troubleshooting, see [Troubleshooting](docs/troubleshooting.md). For a tighter walkthrough, see [Demo Guide](docs/demo-guide.md).
 
 ## Features
 
@@ -67,6 +81,7 @@ For a tighter walkthrough, see [Demo Guide](docs/demo-guide.md).
 - Support advisory AI explanations with local BYOK provider settings and deterministic fallback.
 - Support AI-assisted patch proposals as validated structured `PatchOperation` candidates, with deterministic validation, patch preview, verifier gates, and human review still required.
 - Store n8n connection metadata locally while keeping n8n API keys session-only by default.
+- Provide first-run onboarding, demo mode, in-product troubleshooting, and local reset controls.
 - Support `zh-CN` and `en-US` UI copy.
 
 Supported static diagnostics currently include webhook dedupe, HTTP timeout, payment idempotency, missing error branches, incomplete control-flow routes, and missing success audit trails.
@@ -111,10 +126,11 @@ Out of scope for the current MVP:
 | v0.4.3 | Frozen | Provider Presets and Compatibility Registry |
 | v0.4.4 | Frozen | Public demo polish, README demo media, issue templates, and feedback roadmap |
 | v0.5.0 | Frozen | Read-only n8n Import. Import only, no execution and no write-back. |
-| v0.5.1 | Current stable | Real n8n import polish, CORS/proxy hardening, and manual smoke checklist. |
+| v0.5.1 | Frozen | Real n8n import polish, CORS/proxy hardening, and manual smoke checklist. |
+| v0.5.2 | Current stable | Onboarding, Docker Compose local deployment, demo mode, troubleshooting, and reset polish. |
 | v0.6.0 | Planned | Execution Logs and Observability Analysis for failure paths, slow nodes, and error hotspots. |
 
-The current product definition through v0.5.1:
+The current product definition through v0.5.2:
 
 OpenWorkflowDoctor is a local-first Workflow Review IDE. It supports importing multiple n8n workflows from JSON or optional read-only n8n workflow reads, running static diagnostics, previewing WorkflowIR patches, reviewing verifier output, recording human review, exporting Review Packets, generating advisory AI explanations, and requesting constrained AI PatchOperation proposals through configurable BYOK providers. AI never participates in final acceptance.
 
@@ -133,7 +149,7 @@ n8n JSON
   -> human accept / hold / reject
 ```
 
-For read-only n8n import details, see [v0.5 Read-only n8n Import](docs/n8n-readonly-import.md). For real-instance validation, see [Real n8n Import Smoke Test](docs/real-n8n-import-smoke-test.md).
+For read-only n8n import details, see [v0.5 Read-only n8n Import](docs/n8n-readonly-import.md). For real-instance validation, see [Real n8n Import Smoke Test](docs/real-n8n-import-smoke-test.md). For public demo readiness, see [Public Demo Checklist](docs/public-demo-checklist.md).
 
 Core rules:
 

@@ -118,6 +118,14 @@ export function deleteN8nConnection(
   clearN8nSessionApiKey(sessionStorage, connectionId);
 }
 
+export function clearN8nConnections(localStorage: Storage | undefined, sessionStorage: Storage | undefined): void {
+  const connections = loadN8nConnections(localStorage);
+  localStorage?.removeItem(CONNECTIONS_STORAGE_KEY);
+  for (const connection of connections) {
+    clearN8nSessionApiKey(sessionStorage, connection.connectionId);
+  }
+}
+
 export function saveN8nSessionApiKey(storage: Storage | undefined, connectionId: string, apiKey: string): void {
   if (!storage) {
     return;

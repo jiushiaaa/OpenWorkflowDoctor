@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { parseN8nWorkflow } from "@openworkflowdoctor/workflow-ir";
+import { createDoctorReportFromWorkflow, parseN8nWorkflow } from "@openworkflowdoctor/workflow-ir";
 import type { SampleWorkflowCatalogItem } from "../lib/sample-workflows";
 import {
   createIndexedDbWorkspaceRepository,
@@ -98,7 +98,7 @@ export function useWorkspaceController({ onWorkspaceChanged }: { onWorkspaceChan
     }
   }, [loadWorkspaceSnapshot, onWorkspaceChanged]);
 
-  const loadSampleWorkflow = useCallback(async (sample: SampleWorkflowCatalogItem) => {
+  const loadSampleWorkflow = useCallback(async (sample: SampleWorkflowCatalogItem, options: { runDoctor?: boolean } = {}) => {
     try {
       const repository = repositoryRef.current;
       if (!repository) {
@@ -111,10 +111,18 @@ export function useWorkspaceController({ onWorkspaceChanged }: { onWorkspaceChan
         sourceKind: "sample",
         sourceLabel: sample.filename
       });
+      const nextDocument = options.runDoctor
+        ? {
+            ...document,
+            latestReport: createDoctorReportFromWorkflow(document.originalWorkflowIr, document.currentRequest),
+            latestReportState: "ready" as const,
+            activeTab: "risks" as const
+          }
+        : document;
 
-      await repository.saveWorkflowDocument(document);
-      await repository.setActiveWorkflowDocument(document.id);
-      await loadWorkspaceSnapshot(document.id);
+      await repository.saveWorkflowDocument(nextDocument);
+      await repository.setActiveWorkflowDocument(nextDocument.id);
+      await loadWorkspaceSnapshot(nextDocument.id);
       onWorkspaceChanged();
       setError(null);
     } catch (sampleError) {

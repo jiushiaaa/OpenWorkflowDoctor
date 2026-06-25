@@ -1,11 +1,34 @@
 import { expect, test } from "@playwright/test";
 import path from "node:path";
 
-test("workbench supports the deterministic v0.5.1 review packet demo flow", async ({ page }) => {
+test("first-run onboarding completes demo mode without n8n or AI", async ({ page }) => {
+  await page.goto("/");
+
+  const onboarding = page.getByRole("dialog", { name: "First-run onboarding" });
+  await expect(onboarding).toBeVisible();
+  await expect(onboarding.getByText("OpenWorkflowDoctor does not execute workflows.")).toBeVisible();
+  await expect(onboarding.getByText("Patch proposals are review-only.")).toBeVisible();
+  await expect(onboarding.getByText("Imported data stays local.")).toBeVisible();
+  await expect(onboarding.getByText("Rule-based diagnostics work without AI.")).toBeVisible();
+
+  await onboarding.getByRole("button", { name: "Start demo mode" }).click();
+
+  const reviewSteps = page.getByRole("complementary", { name: "审查步骤" });
+  await expect(onboarding).toBeHidden();
+  await expect(reviewSteps.getByRole("heading", { name: /Refund Risky|Refund Workflow/ })).toBeVisible();
+  await expect(reviewSteps.locator(".primary-action")).toHaveText("预览补丁 IR");
+  await expect(page.getByRole("region", { name: "Review Console" }).getByText("问题")).toBeVisible();
+  await expect(page.getByRole("contentinfo", { name: "Workbench status" })).toContainText("AI: 兜底");
+
+  await page.reload();
+  await expect(page.getByRole("dialog", { name: "First-run onboarding" })).toHaveCount(0);
+});
+
+test("workbench supports the deterministic v0.5.2 review packet demo flow", async ({ page }) => {
   test.setTimeout(60000);
   await page.goto("/");
 
-  await expect(page.getByText("OpenWorkflowDoctor v0.5.1").first()).toBeVisible();
+  await expect(page.getByText("OpenWorkflowDoctor v0.5.2").first()).toBeVisible();
   await expect(page.getByRole("heading", { name: "本地静态审查导出的 n8n JSON" })).toBeVisible();
   const welcomeChecklist = page.getByRole("region", { name: "本次审查会产出" });
   await expect(welcomeChecklist).toBeVisible();
@@ -352,7 +375,7 @@ test("workbench imports a workflow from read-only n8n and runs Doctor", async ({
   await page.goto("/");
   await page.getByRole("button", { name: "设置" }).click();
   const settingsModal = page.getByRole("dialog", { name: "设置" });
-  await expect(settingsModal.getByRole("heading", { name: "n8n 连接" })).toBeVisible();
+  await expect(settingsModal.getByRole("heading", { name: "n8n 连接", exact: true })).toBeVisible();
   await settingsModal.getByLabel("连接名称").fill("Mock n8n");
   await settingsModal.getByLabel("n8n 实例地址").fill("https://mock-n8n.example.test");
   await settingsModal.getByLabel("环境标签").fill("test");
@@ -383,4 +406,26 @@ test("workbench imports a workflow from read-only n8n and runs Doctor", async ({
 
   await reviewSteps.getByRole("button", { name: "刷新 n8n" }).click();
   await expect(reviewSteps.getByText(/previous upstream version/)).toBeVisible();
+});
+
+test("settings can reopen onboarding and confirm reset scope", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("dialog", { name: "First-run onboarding" }).getByRole("button", { name: "Skip for now" }).click();
+
+  await page.getByRole("button", { name: "设置" }).click();
+  const settingsModal = page.getByRole("dialog", { name: "设置" });
+
+  await settingsModal.getByRole("button", { name: "重新打开引导" }).click();
+  await expect(page.getByRole("dialog", { name: "First-run onboarding" })).toBeVisible();
+  await page.getByRole("dialog", { name: "First-run onboarding" }).getByRole("button", { name: "关闭" }).click();
+
+  await page.getByRole("button", { name: "设置" }).click();
+  await settingsModal.getByRole("button", { name: "重置整个本地工作区" }).click();
+  const resetDialog = page.getByRole("dialog", { name: "重置整个本地工作区" });
+  await expect(resetDialog.getByText("将移除：")).toBeVisible();
+  await expect(resetDialog.getByText("imported workflows and review packets")).toBeVisible();
+  await expect(resetDialog.getByText("AI provider config and API key")).toBeVisible();
+  await expect(resetDialog.getByText("将保留：")).toBeVisible();
+  await expect(resetDialog.getByText("bundled demo workflows")).toBeVisible();
+  await resetDialog.getByRole("button", { name: "取消" }).click();
 });

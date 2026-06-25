@@ -4,8 +4,10 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { importN8nReadonlyWorkflow as importN8nReadonlyPayload } from "@openworkflowdoctor/workflow-ir";
 import { CommandPalette } from "./components/CommandPalette";
 import { InspectorPanel } from "./components/InspectorPanel";
+import { OnboardingPanel } from "./components/OnboardingPanel";
 import { ReviewConsole } from "./components/ReviewConsole";
 import { ReviewSteps } from "./components/ReviewSteps";
+import { ResetConfirmationModal } from "./components/ResetConfirmationModal";
 import { SettingsModal } from "./components/SettingsModal";
 import { StatusBar } from "./components/StatusBar";
 import { WorkflowGraphPanel } from "./components/WorkflowGraphPanel";
@@ -33,6 +35,22 @@ import {
   type WorkbenchSettings
 } from "./lib/settings";
 import {
+  buildAiTroubleshootingChecks,
+  buildN8nTroubleshootingChecks,
+  buildResetActionPlan,
+  type N8nTroubleshootingInput
+} from "./lib/troubleshooting";
+import {
+  completeOnboarding,
+  createDefaultOnboardingState,
+  loadOnboardingState,
+  resetOnboardingState,
+  saveOnboardingState,
+  type OnboardingMode,
+  type OnboardingState
+} from "./lib/onboarding";
+import {
+  clearN8nConnections,
   clearN8nSessionApiKey,
   deleteN8nConnection,
   getN8nBaseUrlOrigin,
@@ -51,6 +69,9 @@ export default function Home() {
   const resetAiExplainerRef = useRef<() => void>(() => {});
   const [settings, setSettings] = useState<WorkbenchSettings>(defaultWorkbenchSettings);
   const [settingsLoaded, setSettingsLoaded] = useState(false);
+  const [onboardingState, setOnboardingState] = useState<OnboardingState>(createDefaultOnboardingState);
+  const [isOnboardingOpen, setIsOnboardingOpen] = useState(false);
+  const [isResetConfirmOpen, setIsResetConfirmOpen] = useState(false);
   const [n8nConnections, setN8nConnections] = useState<N8nConnectionSettings[]>([]);
   const [n8nDraft, setN8nDraft] = useState<SaveN8nConnectionInput>({
     label: "",
@@ -64,6 +85,17 @@ export default function Home() {
   const [selectedN8nWorkflowId, setSelectedN8nWorkflowId] = useState("");
   const [n8nImportStatus, setN8nImportStatus] = useState<"idle" | "loading" | "importing" | "error">("idle");
   const [n8nImportError, setN8nImportError] = useState<string | null>(null);
+  const [n8nTroubleshooting, setN8nTroubleshooting] = useState<N8nTroubleshootingInput>({
+    proxyReachable: true,
+    baseUrl: "",
+    apiKeyPresent: false,
+    apiKeyAccepted: null,
+    n8nReachable: null,
+    workflowsListWorks: null,
+    selectedWorkflowImportWorks: null,
+    excludePinnedDataUsed: true,
+    writeEndpointCalled: false
+  });
   const [systemTheme, setSystemTheme] = useState<Exclude<ThemeMode, "system">>(() =>
     typeof window !== "undefined" && window.matchMedia("(prefers-color-scheme: dark)").matches
       ? "dark"
@@ -76,6 +108,22 @@ export default function Home() {
   const aiProviderStatus = getAiProviderStatus(settings.ai);
   const resolvedTheme = settings.theme === "system" ? systemTheme : settings.theme;
   const n8nClient = useMemo(() => createN8nReadonlyClient(fetch, { transport: "proxy" }), []);
+  const n8nTroubleshootingChecks = useMemo(
+    () => buildN8nTroubleshootingChecks(n8nTroubleshooting),
+    [n8nTroubleshooting]
+  );
+  const aiTroubleshootingChecks = useMemo(
+    () =>
+      buildAiTroubleshootingChecks({
+        settings: settings.ai,
+        testRequestStatus:
+          settingsTestStatus === "ready" || settingsTestStatus === "fallback" || settingsTestStatus === "testing"
+            ? settingsTestStatus
+            : "idle"
+      }),
+    [settings.ai, settingsTestStatus]
+  );
+  const resetEntireWorkspacePlan = useMemo(() => buildResetActionPlan("entire-workspace"), []);
 
   const workspace = useWorkspaceController({
     onWorkspaceChanged: () => resetAiExplainerRef.current()
@@ -184,6 +232,122 @@ export default function Home() {
     setSettingsTestStatus("cleared");
   }
 
+  function persistOnboardingCompletion(preferredMode: OnboardingMode) {
+    const nextState = completeOnboarding(onboardingState, { preferredMode });
+    setOnboardingState(nextState);
+    saveOnboardingState(window.localStorage, nextState);
+    setIsOnboardingOpen(false);
+  }
+
+  async function handleStartDemoMode() {
+    const sample = SAMPLE_WORKFLOWS[0];
+    if (!sample) {
+      return;
+    }
+    await workspace.loadSampleWorkflow(sample, { runDoctor: true });
+    persistOnboardingCompletion("demo");
+  }
+
+  function handleStartN8nOnboarding() {
+    persistOnboardingCompletion("n8n-readonly");
+    setIsSettingsOpen(true);
+  }
+
+  function handleSkipOnboarding() {
+    persistOnboardingCompletion(onboardingState.preferredMode);
+  }
+
+  function handleCloseOnboarding() {
+    setIsOnboardingOpen(false);
+  }
+
+  function handleOpenOnboarding() {
+    setIsSettingsOpen(false);
+    setIsOnboardingOpen(true);
+  }
+
+  async function handleTestN8nConnection() {
+    const connection =
+      getSelectedN8nConnection() ??
+      (n8nDraft.baseUrl.trim()
+        ? saveN8nConnection(undefined, {
+            ...n8nDraft,
+            label: n8nDraft.label || "n8n"
+          })
+        : null);
+    if (!connection) {
+      setN8nTroubleshooting((current) => ({
+        ...current,
+        baseUrl: n8nDraft.baseUrl,
+        apiKeyPresent: n8nApiKey.trim().length > 0,
+        n8nReachable: false,
+        apiKeyAccepted: null
+      }));
+      return;
+    }
+    const apiKey = getN8nSessionApiKey(window.sessionStorage, connection.connectionId) || n8nApiKey.trim();
+    if (!apiKey) {
+      setN8nTroubleshooting((current) => ({
+        ...current,
+        baseUrl: connection.baseUrl,
+        apiKeyPresent: false,
+        apiKeyAccepted: null,
+        n8nReachable: null
+      }));
+      return;
+    }
+
+    try {
+      const result = await n8nClient.testConnection({ connection, apiKey });
+      setN8nTroubleshooting((current) => ({
+        ...current,
+        baseUrl: connection.baseUrl,
+        apiKeyPresent: true,
+        n8nReachable: result.ok,
+        apiKeyAccepted: result.ok,
+        workflowsListWorks: result.ok
+      }));
+    } catch {
+      setN8nTroubleshooting((current) => ({
+        ...current,
+        baseUrl: connection.baseUrl,
+        apiKeyPresent: true,
+        n8nReachable: false,
+        apiKeyAccepted: false,
+        workflowsListWorks: false
+      }));
+    }
+  }
+
+  async function handleResetEntireWorkspace() {
+    await workspace.clearWorkspaceData();
+    clearN8nConnections(window.localStorage, window.sessionStorage);
+    setN8nConnections([]);
+    setN8nImportConnectionId("");
+    setN8nWorkflowList([]);
+    setSelectedN8nWorkflowId("");
+    setN8nDraft({ label: "", baseUrl: "", environmentLabel: "" });
+    setN8nApiKey("");
+    setN8nTroubleshooting({
+      proxyReachable: true,
+      baseUrl: "",
+      apiKeyPresent: false,
+      apiKeyAccepted: null,
+      n8nReachable: null,
+      workflowsListWorks: null,
+      selectedWorkflowImportWorks: null,
+      excludePinnedDataUsed: true,
+      writeEndpointCalled: false
+    });
+    saveWorkbenchSettings(window.localStorage, defaultWorkbenchSettings);
+    setSettings(defaultWorkbenchSettings);
+    resetOnboardingState(window.localStorage);
+    const nextOnboardingState = createDefaultOnboardingState();
+    setOnboardingState(nextOnboardingState);
+    setIsResetConfirmOpen(false);
+    setIsOnboardingOpen(true);
+  }
+
   function handleSaveN8nConnection() {
     const connection = saveN8nConnection(window.localStorage, n8nDraft);
     if (n8nApiKey.trim()) {
@@ -198,6 +362,15 @@ export default function Home() {
       environmentLabel: ""
     });
     setN8nApiKey("");
+    setN8nTroubleshooting((current) => ({
+      ...current,
+      baseUrl: connection.baseUrl,
+      apiKeyPresent: n8nApiKey.trim().length > 0,
+      apiKeyAccepted: null,
+      n8nReachable: null,
+      workflowsListWorks: null,
+      selectedWorkflowImportWorks: null
+    }));
   }
 
   function handleDeleteN8nConnection(connectionId: string) {
@@ -231,9 +404,25 @@ export default function Home() {
       setN8nWorkflowList(workflows);
       setSelectedN8nWorkflowId(workflows[0]?.id ?? "");
       setN8nImportStatus("idle");
+      setN8nTroubleshooting((current) => ({
+        ...current,
+        baseUrl: connection.baseUrl,
+        apiKeyPresent: true,
+        apiKeyAccepted: true,
+        n8nReachable: true,
+        workflowsListWorks: true
+      }));
     } catch (error) {
       setN8nImportStatus("error");
       setN8nImportError(error instanceof Error ? error.message : "Unable to list n8n workflows.");
+      setN8nTroubleshooting((current) => ({
+        ...current,
+        baseUrl: connection.baseUrl,
+        apiKeyPresent: true,
+        apiKeyAccepted: false,
+        n8nReachable: false,
+        workflowsListWorks: false
+      }));
     }
   }
 
@@ -275,9 +464,17 @@ export default function Home() {
       });
       setIsN8nImportOpen(false);
       setN8nImportStatus("idle");
+      setN8nTroubleshooting((current) => ({
+        ...current,
+        selectedWorkflowImportWorks: true
+      }));
     } catch (error) {
       setN8nImportStatus("error");
       setN8nImportError(error instanceof Error ? error.message : "Unable to import selected n8n workflow.");
+      setN8nTroubleshooting((current) => ({
+        ...current,
+        selectedWorkflowImportWorks: false
+      }));
     }
   }
 
@@ -350,9 +547,19 @@ export default function Home() {
   useEffect(() => {
     const loadHandle = window.setTimeout(() => {
       setSettings(loadWorkbenchSettings(window.localStorage));
+      const loadedOnboardingState = loadOnboardingState(window.localStorage);
+      setOnboardingState(loadedOnboardingState);
+      setIsOnboardingOpen(!loadedOnboardingState.completed);
       const connections = loadN8nConnections(window.localStorage);
       setN8nConnections(connections);
       setN8nImportConnectionId(connections[0]?.connectionId ?? "");
+      setN8nTroubleshooting((current) => ({
+        ...current,
+        baseUrl: connections[0]?.baseUrl ?? "",
+        apiKeyPresent: connections[0]
+          ? getN8nSessionApiKey(window.sessionStorage, connections[0].connectionId).trim().length > 0
+          : false
+      }));
       setSettingsLoaded(true);
     }, 0);
 
@@ -446,7 +653,13 @@ export default function Home() {
             <button type="button" onClick={() => setIsCommandPaletteOpen(true)}>
               {t("toolbar.commandPalette")}
             </button>
-            <button type="button" onClick={() => setIsSettingsOpen(true)}>
+            <button
+              type="button"
+              onClick={() => {
+                setIsOnboardingOpen(false);
+                setIsSettingsOpen(true);
+              }}
+            >
               {t("toolbar.settings")}
             </button>
           </div>
@@ -635,7 +848,30 @@ export default function Home() {
           onDeleteN8nConnection={handleDeleteN8nConnection}
           onClearN8nSessionKey={handleClearN8nSessionKey}
           onClearWorkspaceData={() => void workspace.clearWorkspaceData()}
+          onTestN8nConnection={() => void handleTestN8nConnection()}
+          onOpenOnboarding={handleOpenOnboarding}
+          onResetEntireWorkspace={() => setIsResetConfirmOpen(true)}
+          n8nTroubleshootingChecks={n8nTroubleshootingChecks}
+          aiTroubleshootingChecks={aiTroubleshootingChecks}
           onClose={() => setIsSettingsOpen(false)}
+        />
+      ) : null}
+
+      {isOnboardingOpen ? (
+        <OnboardingPanel
+          onStartDemo={() => void handleStartDemoMode()}
+          onStartN8n={handleStartN8nOnboarding}
+          onSkip={handleSkipOnboarding}
+          onClose={handleCloseOnboarding}
+        />
+      ) : null}
+
+      {isResetConfirmOpen ? (
+        <ResetConfirmationModal
+          plan={resetEntireWorkspacePlan}
+          t={t}
+          onConfirm={() => void handleResetEntireWorkspace()}
+          onCancel={() => setIsResetConfirmOpen(false)}
         />
       ) : null}
     </main>
