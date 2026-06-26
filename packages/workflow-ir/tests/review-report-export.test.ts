@@ -94,6 +94,20 @@ const sentinelValues = [
   "SECRET_REPORT_REQUEST_SHOULD_NOT_LEAK"
 ];
 
+const freezeAuditSentinelValues = [
+  "SECRET_EXPORT_API_KEY_SHOULD_NOT_LEAK",
+  "SECRET_EXPORT_COOKIE_SHOULD_NOT_LEAK",
+  "SECRET_EXPORT_WEBHOOK_PATH_SHOULD_NOT_LEAK",
+  "SECRET_EXPORT_SIGNED_URL_SHOULD_NOT_LEAK",
+  "SECRET_EXPORT_PLUGIN_ID_SHOULD_NOT_LEAK",
+  "SECRET_EXPORT_DATASET_ID_SHOULD_NOT_LEAK",
+  "SECRET_EXPORT_FILE_ID_SHOULD_NOT_LEAK",
+  "SECRET_EXPORT_PROMPT_SHOULD_NOT_LEAK",
+  "SECRET_EXPORT_CODE_SHOULD_NOT_LEAK",
+  "SECRET_EXPORT_SQL_SHOULD_NOT_LEAK",
+  "SECRET_EXPORT_AI_PROVIDER_KEY_SHOULD_NOT_LEAK"
+];
+
 describe("Review Packet report exports", () => {
   test("renders Markdown with required review sections and adapter metadata", () => {
     const packet = packetFor("n8n.exportedJson", "workflow.json", sentinelN8n);
@@ -188,6 +202,56 @@ describe("Review Packet report exports", () => {
 
     expect(serialized).toContain("[redacted]");
     for (const sentinel of sentinelValues) {
+      expect(serialized).not.toContain(sentinel);
+    }
+  });
+
+  test("keeps v0.9 freeze audit sentinel strings out of exported review surfaces", () => {
+    const imported = importWorkflowSourceArtifact({
+      adapterId: "n8n.exportedJson",
+      fileName: "freeze-audit.json",
+      content: JSON.stringify({
+        name: "Freeze Audit",
+        nodes: [
+          {
+            id: "webhook",
+            name: "Webhook",
+            type: "n8n-nodes-base.webhook",
+            parameters: {
+              apiKey: "SECRET_EXPORT_API_KEY_SHOULD_NOT_LEAK",
+              cookie: "SECRET_EXPORT_COOKIE_SHOULD_NOT_LEAK",
+              path: "SECRET_EXPORT_WEBHOOK_PATH_SHOULD_NOT_LEAK",
+              signedUrl: "https://example.test/download?signature=SECRET_EXPORT_SIGNED_URL_SHOULD_NOT_LEAK",
+              pluginId: "SECRET_EXPORT_PLUGIN_ID_SHOULD_NOT_LEAK",
+              datasetId: "SECRET_EXPORT_DATASET_ID_SHOULD_NOT_LEAK",
+              fileId: "SECRET_EXPORT_FILE_ID_SHOULD_NOT_LEAK",
+              rawPrompt: "SECRET_EXPORT_PROMPT_SHOULD_NOT_LEAK",
+              rawCode: "SECRET_EXPORT_CODE_SHOULD_NOT_LEAK",
+              rawSql: "SECRET_EXPORT_SQL_SHOULD_NOT_LEAK"
+            }
+          }
+        ],
+        connections: {}
+      })
+    });
+    const report = createDoctorReportFromWorkflow(
+      imported.workflowIR,
+      "Check provider key SECRET_EXPORT_AI_PROVIDER_KEY_SHOULD_NOT_LEAK"
+    );
+    const packet = createDoctorReviewPacket(report, "2026-06-26T00:00:00.000Z");
+    const markdown = renderReviewPacketMarkdownReport(packet);
+    const html = renderReviewPacketHtmlReport(packet);
+    const artifact = {
+      schemaVersion: "openworkflowdoctor.review-packet-artifact.v1",
+      packet
+    };
+    const aiInput = buildAiPatchProposalInput(report, {
+      request: "Check provider key SECRET_EXPORT_AI_PROVIDER_KEY_SHOULD_NOT_LEAK"
+    });
+    const serialized = JSON.stringify({ packet, markdown, html, artifact, aiInput });
+
+    expect(serialized).toContain("[redacted]");
+    for (const sentinel of freezeAuditSentinelValues) {
       expect(serialized).not.toContain(sentinel);
     }
   });

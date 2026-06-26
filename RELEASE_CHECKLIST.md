@@ -1,4 +1,4 @@
-# OpenWorkflowDoctor v0.9.0 Public Release Checklist
+# OpenWorkflowDoctor v0.9.0 Freeze Audit Checklist
 
 Run these commands from the repository root before any public release commit:
 
@@ -24,6 +24,11 @@ Expected result: every command exits with code 0. For `docker compose up`, verif
 - `docs/source-adapter-conformance.md` documents shared conformance requirements.
 - `docs/architecture.md` describes the unified adapter import pipeline.
 - GitHub Actions Docker Smoke must pass before tagging v0.9.0.
+
+## v0.9.0 Freeze Audit Result
+
+- Freeze audit passed locally after required checks.
+- GitHub Actions Docker Smoke passed on `origin/main` for the v0.9.0 implementation commit.
 
 ## v0.9.0 Freeze Checks
 

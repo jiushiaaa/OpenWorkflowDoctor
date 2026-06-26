@@ -2,9 +2,9 @@
 
 OpenWorkflowDoctor is a local-first Workflow Review IDE for existing workflow artifacts. It is not a workflow builder, workflow runtime, automatic workflow fixer, or production platform connector.
 
-## Current Freeze Candidate
+## Current Frozen Release
 
-`v0.9.0` is the current freeze candidate: Review Packet Export Polish. It preserves the canonical JSON Review Packet and adds Markdown/static HTML Review Reports, readable report preview UI, stale report warnings, adapter metadata in reports, and secret-safe export coverage.
+`v0.9.0` is the current frozen release: Review Packet Export Polish. It preserves the canonical JSON Review Packet and adds Markdown/static HTML Review Reports, readable report preview UI, stale report warnings, adapter metadata in reports, and secret-safe export coverage.
 
 The current product loop is:
 
@@ -151,7 +151,7 @@ Non-goals:
 - Platform write-back or native platform patch export.
 - Workflow execution, runtime logs, credential inspection, runtime plugin execution, or cloud sync.
 
-## v0.9.0 - Freeze Candidate: Review Packet Export Polish
+## v0.9.0 - Frozen: Review Packet Export Polish
 
 Scope:
 

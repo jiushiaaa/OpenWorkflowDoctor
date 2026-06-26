@@ -142,7 +142,7 @@ Out of scope for the current MVP:
 | v0.6.1 | Frozen | Dify read-only import feasibility only. No shipped Dify API connection or user-facing import surface. |
 | v0.7.0 | Frozen | Coze Workflow Definition JSON Import. Import only, no Coze API, no execution, no resource fetch, no publish, and no write-back. |
 | v0.8.0 | Frozen | Adapter SDK / Source Adapter Framework. Static built-in adapters, unified import pipeline, shared guardrails, conformance kit, and Custom Graph JSON. |
-| v0.9.0 | Freeze candidate | Review Packet Export Polish. Canonical JSON packet preserved, Markdown and static HTML review reports added, readable report preview, stale warnings, and secret-safe export tests. |
+| v0.9.0 | Frozen | Review Packet Export Polish. Canonical JSON packet preserved, Markdown and static HTML review reports added, readable report preview, stale warnings, and secret-safe export tests. |
 
 The current product definition through v0.9.0:
 

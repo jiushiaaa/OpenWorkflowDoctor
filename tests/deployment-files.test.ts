@@ -86,7 +86,7 @@ describe("local deployment files", () => {
     expect(lockfile).toContain('"version": "0.9.0"');
     expect(lockfile).not.toContain('"@openworkflowdoctor/workflow-ir": "0.7.0"');
     expect(lockfile).not.toContain('"@openworkflowdoctor/workflow-ai": "0.7.0"');
-    expect(roadmap).toContain("`v0.9.0` is the current freeze candidate");
+    expect(roadmap).toContain("`v0.9.0` is the current frozen release");
   });
 
   test("GitHub Actions Docker smoke workflow builds, starts, probes, and cleans up Compose", () => {
