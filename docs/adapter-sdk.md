@@ -67,6 +67,8 @@ The unified artifact import pipeline:
 
 v0.8 does not support third-party executable adapters, user-uploaded JavaScript adapters, remote adapter loading, adapter marketplaces, workflow execution, platform write-back, credential inspection, runtime plugin execution, or cloud sync.
 
+v0.9.1 does not change the adapter contract. It requires every built-in adapter to keep sentinel values out of WorkflowIR, workspace documents, Review Packet artifacts, report previews, AI contexts, adapter metadata, and source diagnostics.
+
 ## Review Report Metadata
 
 v0.9 report exports reuse adapter metadata from the sanitized Review Packet. New source adapters must keep `adapterId`, `sourceKind`, `sourcePlatform`, `importMethod`, `stability`, parser warnings, source diagnostics, and redaction summary safe for JSON, Markdown, and static HTML export.

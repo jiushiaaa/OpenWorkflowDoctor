@@ -4,7 +4,7 @@ Local-first Workflow Review IDE for existing workflow artifacts.
 
 OpenWorkflowDoctor reviews workflows. It does not run them.
 
-Current release line: `v0.9.0` Review Packet Export Polish.
+Current release line: `v0.9.1` Security / Dependency / Release Hardening.
 
 It is not a workflow builder, workflow runtime, automatic n8n fixer, or production n8n mutator.
 
@@ -143,8 +143,9 @@ Out of scope for the current MVP:
 | v0.7.0 | Frozen | Coze Workflow Definition JSON Import. Import only, no Coze API, no execution, no resource fetch, no publish, and no write-back. |
 | v0.8.0 | Frozen | Adapter SDK / Source Adapter Framework. Static built-in adapters, unified import pipeline, shared guardrails, conformance kit, and Custom Graph JSON. |
 | v0.9.0 | Frozen | Review Packet Export Polish. Canonical JSON packet preserved, Markdown and static HTML review reports added, readable report preview, stale warnings, and secret-safe export tests. |
+| v0.9.1 | Freeze audit | Security, dependency, CI/release, Docker/env, and docs hardening before v1.0. No product features added. |
 
-The current product definition through v0.9.0:
+The current product definition through v0.9.1:
 
 OpenWorkflowDoctor is a local-first Workflow Review IDE. It supports importing multiple workflows from n8n JSON, optional read-only n8n workflow reads, Dify DSL YAML, Coze definition JSON, or Custom Graph JSON, running static diagnostics, previewing WorkflowIR patches, reviewing verifier output, recording human review, exporting JSON/Markdown/HTML review artifacts, generating advisory AI explanations, and requesting constrained AI PatchOperation proposals through configurable BYOK providers. AI never participates in final acceptance.
 

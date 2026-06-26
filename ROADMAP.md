@@ -4,7 +4,7 @@ OpenWorkflowDoctor is a local-first Workflow Review IDE for existing workflow ar
 
 ## Current Frozen Release
 
-`v0.9.0` is the current frozen release: Review Packet Export Polish. It preserves the canonical JSON Review Packet and adds Markdown/static HTML Review Reports, readable report preview UI, stale report warnings, adapter metadata in reports, and secret-safe export coverage.
+`v0.9.1` is the current freeze-audit release: Security / Dependency / Release Hardening. It preserves the v0.9.0 Review Packet export surface while hardening dependency audit status, sentinel leakage coverage, CI/release gates, Docker/env defaults, and v1 readiness docs.
 
 The current product loop is:
 
@@ -171,6 +171,28 @@ Non-goals:
 - Credential inspection.
 - Platform-native patch export.
 - Cloud sharing, accounts, teams, comments, or hosted collaboration.
+
+## v0.9.1 - Freeze Audit: Security / Dependency / Release Hardening
+
+Scope:
+
+- Remediate the Vitest/Vite/esbuild audit chain without forced dependency churn.
+- Document the remaining Next/PostCSS transitive audit risk if no safe override exists.
+- Add Release Gate CI for unit tests, lint, typecheck, build, e2e, and audit reporting.
+- Keep Docker Smoke separate and Node 24-compatible on GitHub-hosted runners.
+- Expand final v1 preflight sentinel coverage across WorkflowIR, workspace documents, Review Packet artifacts, reports, AI contexts, adapter metadata, source diagnostics, and report preview state where testable.
+- Synchronize public docs and v1 readiness criteria.
+
+Non-goals:
+
+- Product feature expansion.
+- New workflow sources.
+- Workflow execution.
+- Platform write-back.
+- Credential inspection.
+- Platform-native patch export.
+- Dify or Coze direct cloud import as default integrations.
+- Runtime logs, agent harnesses, cloud sync, accounts, collaboration, or public plugins.
 
 ## v0.10.0+ - Planned: Execution Logs and Observability Analysis
 

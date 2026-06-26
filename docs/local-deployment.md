@@ -1,6 +1,6 @@
 # Local Deployment
 
-OpenWorkflowDoctor v0.5.2 is a local-first Workflow Reliability IDE for reviewing existing n8n workflows. It does not run workflows, write back to n8n, inspect credentials, or sync to a cloud service.
+OpenWorkflowDoctor v0.9.1 is a local-first Workflow Reliability IDE for reviewing existing workflow artifacts. It does not run workflows, write back to source platforms, inspect credentials, or sync to a cloud service.
 
 ## Quick Try With Docker Compose
 

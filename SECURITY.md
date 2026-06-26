@@ -6,7 +6,7 @@ OpenWorkflowDoctor is local-first and review-first. It reviews exported n8n work
 
 - OpenWorkflowDoctor does not execute workflows.
 - OpenWorkflowDoctor does not trigger external workflow side effects.
-- OpenWorkflowDoctor does not connect to production n8n in the current MVP.
+- OpenWorkflowDoctor only reads from n8n when a user explicitly provides a session-only key for the optional read-only import path.
 - OpenWorkflowDoctor does not write back to n8n.
 - Imported workflow JSON is parsed into secret-safe `WorkflowIR` before review.
 - Sensitive values such as API keys, authorization headers, passwords, tokens, private keys, credentials, and secrets are redacted before they enter WorkflowIR, UI summaries, or review exports.
@@ -51,3 +51,4 @@ If you find a security issue, do not open a public issue containing secrets, API
 - n8n-importable patched workflow export.
 - Platform-native patch export from Review Reports.
 - AI mutation of raw workflow JSON.
+- Public plugin systems, user-uploaded JavaScript adapters, and remote adapter loading.

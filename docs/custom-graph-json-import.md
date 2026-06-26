@@ -4,6 +4,8 @@
 
 It does not support JavaScript, executable mapping rules, dynamic imports, remote schemas, or runtime plugins.
 
+Custom Graph JSON remains a declarative built-in adapter only. It is not a public plugin system and does not allow user-uploaded JavaScript adapters, remote adapter loading, workflow execution, platform write-back, credential inspection, or platform-native patch export.
+
 ## Shape
 
 ```json

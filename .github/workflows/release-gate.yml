@@ -1,0 +1,48 @@
+name: Release Gate
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  release-gate:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: "20"
+          package-manager-cache: false
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run unit tests
+        run: npm test
+
+      - name: Run lint
+        run: npm run lint
+
+      - name: Run typecheck
+        run: npm run typecheck
+
+      - name: Build
+        run: npm run build
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps
+
+      - name: Run e2e tests
+        run: npm run test:e2e
+
+      - name: Run dependency audit report
+        run: |
+          set +e
+          npm audit --json > npm-audit.json
+          node -e "const fs=require('fs'); const audit=JSON.parse(fs.readFileSync('npm-audit.json','utf8')); const v=audit.metadata?.vulnerabilities ?? {}; console.log('npm audit summary:', JSON.stringify(v)); if (audit.vulnerabilities) { for (const [name, item] of Object.entries(audit.vulnerabilities)) console.log(name + ': ' + item.severity); }"
+          exit 0

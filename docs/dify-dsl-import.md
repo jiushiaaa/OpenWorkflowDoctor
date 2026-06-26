@@ -104,7 +104,7 @@ Dify imports show a `Dify DSL` source badge and the warning:
 v0.6 does not include:
 
 - Dify API connection
-- Dify direct read-only import
+- Dify direct read-only import as a default supported integration
 - Dify workflow execution
 - Dify publish or write-back
 - Dify credential inspection

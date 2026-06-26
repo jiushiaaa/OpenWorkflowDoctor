@@ -8,6 +8,8 @@ import {
 } from "@openworkflowdoctor/workflow-ir";
 import { describe, expect, test } from "vitest";
 import branchWorkflow from "../../../../packages/workflow-ir/tests/fixtures/refund-branch-workflow.json";
+import { assertNoSecuritySentinelLeak, v091SecuritySentinels } from "../../../../tests/security-sentinel-helpers";
+import { deriveDoctorReviewState } from "../hooks/useDoctorReviewController";
 import {
   createMemoryWorkspaceRepository,
   createReviewPacketArtifact,
@@ -545,6 +547,68 @@ workflow:
     expect(serialized).not.toContain("SECRET_CUSTOM_WEBHOOK_PATH_SHOULD_NOT_LEAK");
     expect(serialized).not.toContain("SECRET_CUSTOM_PROMPT_SHOULD_NOT_LEAK");
     expect(serialized).not.toContain("sourceMetadata\":{\"workspaceId\"");
+  });
+
+  test("keeps v0.9.1 sentinels out of workflow documents, packet artifacts, and report preview state", () => {
+    const imported = importWorkflowSourceArtifact({
+      adapterId: "custom.graphJson",
+      fileName: "v091-workspace.json",
+      mimeType: "application/json",
+      content: JSON.stringify({
+        name: "v0.9.1 Workspace",
+        sourceMetadata: {
+          workspaceId: v091SecuritySentinels.workspaceId,
+          appId: v091SecuritySentinels.appId,
+          botId: v091SecuritySentinels.botId,
+          orgId: v091SecuritySentinels.orgId,
+          tenantId: v091SecuritySentinels.tenantId,
+          userId: v091SecuritySentinels.userId
+        },
+        nodes: [
+          {
+            id: "start",
+            name: "Start",
+            type: "custom.start",
+            parameters: {
+              apiKey: v091SecuritySentinels.apiKey,
+              authorization: `Bearer ${v091SecuritySentinels.bearerToken}`,
+              cookie: v091SecuritySentinels.cookie,
+              password: v091SecuritySentinels.password,
+              privateKey: v091SecuritySentinels.privateKey,
+              webhookPath: v091SecuritySentinels.webhookPath,
+              signedUrl: `https://example.test/download?signature=${v091SecuritySentinels.signedUrl}`,
+              pluginId: v091SecuritySentinels.pluginId,
+              datasetId: v091SecuritySentinels.datasetId,
+              fileId: v091SecuritySentinels.fileId,
+              rawPrompt: v091SecuritySentinels.rawPrompt,
+              rawCode: v091SecuritySentinels.rawCode,
+              rawSql: v091SecuritySentinels.rawSql,
+              customGraphSensitiveContent: v091SecuritySentinels.customGraphSensitiveContent
+            }
+          }
+        ],
+        edges: []
+      })
+    });
+    const document = createWorkflowDocumentFromWorkflowIr({
+      workflow: imported.workflowIR,
+      sourceKind: imported.sourceMetadata.sourceKind,
+      sourceLabel: "v091-workspace.json",
+      sourceMetadata: imported.sourceMetadata
+    });
+    const report = createDoctorReportFromWorkflow(document.originalWorkflowIr, "Review safe state");
+    const documentWithReport = {
+      ...document,
+      latestReport: report,
+      latestReportState: "ready" as const
+    };
+    const artifact = createReviewPacketArtifact({
+      workflowDocumentId: document.id,
+      packet: createDoctorReviewPacket(report)
+    });
+    const previewState = deriveDoctorReviewState(documentWithReport, [artifact]);
+
+    assertNoSecuritySentinelLeak({ documentWithReport, artifact, previewState });
   });
 
   test("rejects raw imported workflow fields in stored workflow documents", () => {

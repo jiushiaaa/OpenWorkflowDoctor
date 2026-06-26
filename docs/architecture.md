@@ -6,6 +6,8 @@ OpenWorkflowDoctor is a Workflow Reliability IDE for existing workflow artifacts
 
 v0.8 stabilizes the internal built-in adapter architecture. It is not a public plugin system and does not allow user-uploaded JavaScript adapters, remote adapter loading, adapter marketplaces, platform write-back, workflow execution, credential inspection, runtime plugin execution, or cloud sync.
 
+v0.9.1 is a hardening release only. It adds dependency audit remediation, final pre-v1 sentinel coverage, Release Gate CI, Docker/env checks, and documentation consistency updates without adding workflow sources, execution, write-back, credential inspection, platform-native patch export, public plugins, cloud sync, accounts, collaboration, runtime logs, or agent harness features.
+
 ```text
 source artifact or read-only payload
   -> built-in WorkflowSourceAdapter

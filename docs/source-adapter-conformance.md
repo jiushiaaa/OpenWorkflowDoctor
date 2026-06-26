@@ -38,3 +38,5 @@ v0.8 applies conformance-style coverage to:
 n8n read-only import keeps its existing read-only connection tests and participates in the registry as `n8n.readonlyImport`.
 
 v0.9 adds report export coverage for JSON Review Packet, Markdown Review Report, static HTML Review Report, Review Packet Artifact shape, and AI patch input sentinel checks.
+
+v0.9.1 expands the final pre-v1 sentinel matrix to include WorkflowIR, Workflow Documents, Review Packet Artifacts, DoctorReviewPacket JSON, Markdown, HTML, AI Explainer context, AI Patch context, adapter metadata, source diagnostics, and report preview state where testable.

@@ -1,6 +1,6 @@
 # Review Report Export
 
-OpenWorkflowDoctor v0.9.0 adds human-readable Review Report exports on top of the existing JSON Review Packet.
+OpenWorkflowDoctor v0.9.0 added human-readable Review Report exports on top of the existing JSON Review Packet. v0.9.1 keeps that export surface unchanged and hardens the secret-safety and release-gate checks around it.
 
 The source of truth is unchanged:
 
@@ -100,4 +100,4 @@ The workbench also shows a stale banner when the active workflow document marks 
 
 Reports run through the same `sanitizeForExport` boundary as Review Packets. Redaction happens before values can reach the report renderer, UI preview, JSON packet, Markdown, HTML, Review Packet Artifact, or AI patch input.
 
-Sentinel tests cover JSON Review Packet, Markdown report, HTML report, Review Packet Artifact shape, and AI patch input for representative raw artifacts and secret values.
+Sentinel tests cover JSON Review Packet, Markdown report, HTML report, Review Packet Artifact shape, Workflow Document state, report preview state where testable, adapter metadata, source diagnostics, AI Explainer context, and AI patch input for representative raw artifacts and secret values.

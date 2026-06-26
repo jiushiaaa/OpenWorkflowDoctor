@@ -4,6 +4,8 @@ OpenWorkflowDoctor v0.7 adds manual Coze workflow definition JSON import as a di
 
 This is not a Coze cloud integration, runtime, exporter, or write-back path.
 
+Coze direct cloud import remains unsupported as a default integration. The supported Coze source is a local workflow definition JSON artifact only.
+
 ## Supported Input
 
 The Coze importer accepts `.json` files only. The uploaded JSON is treated as untrusted input.

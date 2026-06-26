@@ -48,6 +48,8 @@ v0.5 must not call:
 
 OpenWorkflowDoctor also does not export n8n-importable patch JSON. Patch Preview remains a local `WorkflowIR` preview only.
 
+This path is the only supported direct platform read in the MVP. It is read-only, user-initiated, and session-key based; it is not platform write-back, workflow execution, credential inspection, or a production n8n mutator.
+
 ## Connection Storage
 
 Connection metadata is stored in browser local storage:
