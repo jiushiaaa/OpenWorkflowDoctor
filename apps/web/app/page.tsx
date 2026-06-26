@@ -708,6 +708,9 @@ export default function Home() {
           report={doctor.report}
           reviewMode={doctor.reviewMode}
           reviewPacket={doctor.reviewPacket}
+          reviewReportMarkdown={doctor.reviewReportMarkdown}
+          reviewReportHtml={doctor.reviewReportHtml}
+          isReportStale={doctor.isReportStale}
           requiredChecklistItems={doctor.requiredChecklistItems}
           confirmedChecklistItemIds={doctor.confirmedChecklistItemIds}
           canAcceptHumanReview={doctor.canAcceptHumanReview}
@@ -728,7 +731,7 @@ export default function Home() {
           onToggleChecklistConfirmation={doctor.toggleChecklistConfirmation}
           onRecordHumanDecision={doctor.recordHumanDecision}
           onHumanReviewNoteChange={doctor.updateHumanReviewNote}
-          onExportReviewPacket={() => void doctor.exportReviewPacket()}
+          onExportReviewPacket={(kind) => void doctor.exportReviewPacket(kind)}
           onExportPatchedWorkflowIr={doctor.exportPatchedWorkflowIr}
         />
       </section>

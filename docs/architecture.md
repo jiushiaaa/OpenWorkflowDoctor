@@ -17,7 +17,22 @@ source artifact or read-only payload
 
 The static registry contains `n8n.exportedJson`, `n8n.readonlyImport`, `dify.dslYaml`, `coze.definitionJson`, and `custom.graphJson`. Registry metadata drives the import menu, supported sources panel, source badges, capability labels, docs, and conformance coverage.
 
-Review Packets record sanitized adapter metadata: `adapterId`, `sourceKind`, `sourcePlatform`, `importMethod`, `stability`, source metadata, parser warnings, redaction summary, and source diagnostics. They do not include raw source artifacts, native platform patch output, secrets, raw prompts, raw code, raw SQL, credentials, or platform-importable patches.
+Review Packets record sanitized adapter metadata: `adapterId`, `sourceKind`, `sourcePlatform`, `importMethod`, `stability`, source metadata, parser warnings, redaction summary, and source diagnostics. JSON Review Packets, Markdown Review Reports, and static HTML Review Reports are all generated from that sanitized packet data. They do not include raw source artifacts, native platform patch output, secrets, raw prompts, raw code, raw SQL, credentials, or platform-importable patches.
+
+## v0.9 Review Report Export Boundary
+
+v0.9 keeps `DoctorReviewPacket` as the canonical review artifact and adds two human-readable renderers:
+
+```text
+DoctorReviewPacket
+  -> JSON Review Packet
+  -> Markdown Review Report
+  -> static HTML Review Report
+```
+
+The Markdown and HTML reports include a deterministic section order: header, executive summary, source metadata, trust boundaries, diagnostics, patch proposal, patch diff summary, verifier result, human review, and appendix. The web workbench previews the same review information through overview, risks, patch, verifier, human review, source metadata, and export sections while keeping the raw JSON packet available.
+
+Reports include `reportFormatVersion`, `packetSchemaVersion`, generated timestamp, export kind, review target fingerprint, and adapter metadata. If the active report state is stale or the current fingerprint differs from the packet fingerprint, the UI and rendered reports show a stale warning. HTML exports are static only: no JavaScript, external CSS, external fonts, remote images, or third-party assets.
 
 ## v0.7 Coze Workflow Definition Import Boundary
 
@@ -216,6 +231,8 @@ The UI-facing deterministic entry point is `createDoctorReport(rawWorkflow, requ
 
 `createDoctorReviewPacket(report)` converts a `DoctorReport` into a serializable handoff artifact with a stable review target fingerprint, before/after risk counts, resolved/remaining/introduced issue ids, readable patch diff, structured operations, patched WorkflowIR, verifier output, an acceptance checklist derived from verifier gates, an optional human review decision, and `humanReviewValidation`.
 
+`renderReviewPacketMarkdownReport(packet)` and `renderReviewPacketHtmlReport(packet)` render that same sanitized packet into team-shareable reports. They summarize review evidence rather than serializing raw source artifacts, raw prompts, raw code, raw SQL, credentials, or native platform patches.
+
 `apps/web` uses these entry points directly for the first workbench: JSON import, graph canvas, node inspector, summary, risk list, patch proposal, reviewed patched preview, verification report, acceptance checklist, human review decision, and local JSON exports.
 
 In v0.3, `apps/web` wraps that same deterministic flow in a local workspace layer. Importing JSON or loading a sample creates a Workflow Document from parsed `WorkflowIR`. Running Doctor persists the latest `DoctorReport` on that document. Exporting a review packet saves a Review Packet Artifact for that document and downloads the canonical packet JSON.
@@ -250,6 +267,7 @@ Diagnostics evaluate the patched `WorkflowIR` shape, not only individual node pa
 - `patch-diff.ts`: readable diff formatter for reviewable `PatchOperation` objects.
 - `patch.ts`: immutable application of structured `PatchOperation` objects. Insert-after operations route success paths through the inserted node while preserving target-node error branches; explicit error-branch operations add a separate `error` output without changing success routes; branch-route operations add a stop/fallback route to a specific missing `main[index]` output.
 - `review-packet.ts`: serializable handoff packet for human review and artifact export.
+- `review-report-export.ts`: Markdown and static HTML report renderers derived from sanitized Review Packet data.
 - `structured-output.ts`: Zod schemas and parsers for runtime validation of `PatchProposal` and `VerificationReport` output.
 - `verifier.ts`: separate verifier that compares original and patched workflows and returns a `VerificationReport`.
 

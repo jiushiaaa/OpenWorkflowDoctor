@@ -24,11 +24,11 @@ test("first-run onboarding completes demo mode without n8n or AI", async ({ page
   await expect(page.getByRole("dialog", { name: "First-run onboarding" })).toHaveCount(0);
 });
 
-test("workbench supports the deterministic v0.8.0 review packet demo flow", async ({ page }) => {
+test("workbench supports the deterministic v0.9.0 review packet demo flow", async ({ page }) => {
   test.setTimeout(60000);
   await page.goto("/");
 
-  await expect(page.getByText("OpenWorkflowDoctor v0.8.0").first()).toBeVisible();
+  await expect(page.getByText("OpenWorkflowDoctor v0.9.0").first()).toBeVisible();
   await expect(page.getByRole("heading", { name: "本地静态审查工作流定义" })).toBeVisible();
   const welcomeChecklist = page.getByRole("region", { name: "本次审查会产出" });
   await expect(welcomeChecklist).toBeVisible();
@@ -169,7 +169,11 @@ test("workbench supports the deterministic v0.8.0 review packet demo flow", asyn
   await acceptButton.click();
   await expect(reviewSteps.getByRole("button", { name: "导出审查包" })).toBeVisible();
   await reviewConsole.getByRole("tab", { name: "审查包" }).click();
-  await expect(reviewConsole.getByText("工件预览")).toBeVisible();
+  await expect(reviewConsole.getByText("审查报告预览")).toBeVisible();
+  await expect(reviewConsole.getByRole("button", { name: "导出 JSON 审查包" })).toBeVisible();
+  await expect(reviewConsole.getByRole("button", { name: "导出 Markdown 报告" })).toBeVisible();
+  await expect(reviewConsole.getByRole("button", { name: "导出 HTML 报告" })).toBeVisible();
+  await expect(reviewConsole.getByText("原始 JSON 审查包")).toBeVisible();
 
   const downloadPromise = page.waitForEvent("download");
   await reviewSteps.getByRole("button", { name: "导出审查包" }).click();

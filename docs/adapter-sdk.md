@@ -4,7 +4,7 @@ OpenWorkflowDoctor v0.8 uses an internal built-in source adapter framework. It i
 
 ## Goals
 
-- Add future built-in workflow sources without rewriting import UI, redaction, diagnostics, Review Packet metadata, and tests.
+- Add future built-in workflow sources without rewriting import UI, redaction, diagnostics, Review Packet metadata, Review Report metadata, and tests.
 - Keep raw source artifacts inside the adapter/import boundary.
 - Persist only secret-safe `WorkflowIR`, sanitized source metadata, parser warnings, source diagnostics, and redaction summaries.
 - Keep AI Patch Proposal WorkflowIR-only.
@@ -61,8 +61,12 @@ The unified artifact import pipeline:
 6. Normalize to `WorkflowIR`.
 7. Attach sanitized source metadata.
 8. Create a workspace document from sanitized output only.
-9. Make metadata available to UI, AI Explainer, AI Patch, Verifier, and Review Packet.
+9. Make metadata available to UI, AI Explainer, AI Patch, Verifier, Review Packet, and Markdown/HTML Review Reports.
 
 ## Boundaries
 
 v0.8 does not support third-party executable adapters, user-uploaded JavaScript adapters, remote adapter loading, adapter marketplaces, workflow execution, platform write-back, credential inspection, runtime plugin execution, or cloud sync.
+
+## Review Report Metadata
+
+v0.9 report exports reuse adapter metadata from the sanitized Review Packet. New source adapters must keep `adapterId`, `sourceKind`, `sourcePlatform`, `importMethod`, `stability`, parser warnings, source diagnostics, and redaction summary safe for JSON, Markdown, and static HTML export.

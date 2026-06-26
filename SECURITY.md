@@ -13,6 +13,7 @@ OpenWorkflowDoctor is local-first and review-first. It reviews exported n8n work
 - API keys for AI providers are stored only in local browser settings for BYOK use.
 - API keys are not included in WorkflowIR.
 - API keys are not included in Doctor Review Packets.
+- API keys are not included in Markdown or static HTML Review Reports.
 - API keys are not included in workspace documents.
 - API keys are not included in GitHub release notes, smoke result docs, or public docs.
 
@@ -34,6 +35,7 @@ OpenWorkflowDoctor is local-first and review-first. It reviews exported n8n work
 - Treat imported workflow content as untrusted data.
 - Review every PatchOperation before previewing or accepting a patch.
 - Treat Review Packets as handoff artifacts for human approval, not proof of runtime safety.
+- Treat Markdown and HTML Review Reports the same way: local handoff artifacts, not proof of runtime safety and not platform-native patch output.
 - Keep local provider API keys out of screenshots, issue reports, logs, and public documentation.
 
 ## Reporting Issues
@@ -47,4 +49,5 @@ If you find a security issue, do not open a public issue containing secrets, API
 - Production n8n API integration.
 - Automatic write-back to n8n.
 - n8n-importable patched workflow export.
+- Platform-native patch export from Review Reports.
 - AI mutation of raw workflow JSON.

@@ -32,6 +32,9 @@ export function ReviewConsole({
   report,
   reviewMode,
   reviewPacket,
+  reviewReportMarkdown,
+  reviewReportHtml,
+  isReportStale,
   requiredChecklistItems,
   confirmedChecklistItemIds,
   canAcceptHumanReview,
@@ -62,6 +65,9 @@ export function ReviewConsole({
   report: DoctorReport | null;
   reviewMode: ReviewMode;
   reviewPacket: ReturnType<typeof createDoctorReviewPacket> | null;
+  reviewReportMarkdown: string | null;
+  reviewReportHtml: string | null;
+  isReportStale: boolean;
   requiredChecklistItems: NonNullable<ReturnType<typeof createDoctorReviewPacket>>["acceptanceChecklist"];
   confirmedChecklistItemIds: string[];
   canAcceptHumanReview: boolean;
@@ -82,7 +88,7 @@ export function ReviewConsole({
   onToggleChecklistConfirmation: (itemId: string) => void;
   onRecordHumanDecision: (decision: HumanReviewDecision) => void;
   onHumanReviewNoteChange: (note: string) => void;
-  onExportReviewPacket: () => void;
+  onExportReviewPacket: (kind: "json" | "markdown" | "html") => void;
   onExportPatchedWorkflowIr: () => void;
 }) {
   return (
@@ -148,6 +154,9 @@ export function ReviewConsole({
           <ReviewPacketTab
             report={report}
             reviewPacket={reviewPacket}
+            reviewReportMarkdown={reviewReportMarkdown}
+            reviewReportHtml={reviewReportHtml}
+            isReportStale={isReportStale}
             reviewMode={reviewMode}
             t={t}
             onExportReviewPacket={onExportReviewPacket}
@@ -446,6 +455,9 @@ function PatchDiffTab({
 function ReviewPacketTab({
   report,
   reviewPacket,
+  reviewReportMarkdown,
+  reviewReportHtml,
+  isReportStale,
   reviewMode,
   t,
   onExportReviewPacket,
@@ -453,25 +465,44 @@ function ReviewPacketTab({
 }: {
   report: DoctorReport | null;
   reviewPacket: ReturnType<typeof createDoctorReviewPacket> | null;
+  reviewReportMarkdown: string | null;
+  reviewReportHtml: string | null;
+  isReportStale: boolean;
   reviewMode: ReviewMode;
   t: Translator;
-  onExportReviewPacket: () => void;
+  onExportReviewPacket: (kind: "json" | "markdown" | "html") => void;
   onExportPatchedWorkflowIr: () => void;
 }) {
   if (!report || !reviewPacket) {
-    return <p className="empty-text">{t("packet.pending")}</p>;
+    return (
+      <div className="console-stack">
+        <p className="empty-text">{t("packet.pending")}</p>
+        <ul className="compact-list">
+          <li><small>{t("packet.emptyDiagnostics")}</small></li>
+          <li><small>{t("packet.emptyPatch")}</small></li>
+          <li><small>{t("packet.emptyVerifier")}</small></li>
+          <li><small>{t("packet.emptyHumanReview")}</small></li>
+        </ul>
+      </div>
+    );
   }
 
   return (
-    <div className="console-stack">
+    <div className="console-stack report-preview">
       <div className="console-toolbar">
         <div>
-          <h3>{t("packet.artifactPreview")}</h3>
-          <p>{t("packet.description")}</p>
+          <h3>{t("packet.reportPreview")}</h3>
+          <p>{t("packet.reportDescription")}</p>
         </div>
         <div className="console-actions">
-          <button type="button" onClick={onExportReviewPacket}>
-            {t("actions.exportReviewPacket")}
+          <button type="button" onClick={() => onExportReviewPacket("json")}>
+            {t("actions.exportJsonReviewPacket")}
+          </button>
+          <button type="button" onClick={() => onExportReviewPacket("markdown")}>
+            {t("actions.exportMarkdownReport")}
+          </button>
+          <button type="button" onClick={() => onExportReviewPacket("html")}>
+            {t("actions.exportHtmlReport")}
           </button>
           <button
             type="button"
@@ -487,13 +518,122 @@ function ReviewPacketTab({
         <small>{t("packet.targetFingerprint")}</small>
         <code>{reviewPacket.reviewTargetFingerprint}</code>
       </div>
+      {isReportStale ? <p className="review-warning">{t("packet.stale")}</p> : null}
+
+      <section className="report-section" aria-label={t("packet.overview")}>
+        <div className="section-title-row">
+          <div>
+            <span>{t("packet.overview")}</span>
+            <h3>{reviewPacket.workflowName}</h3>
+          </div>
+        </div>
+        <div className="console-grid">
+          <Metric label={t("toolbar.metrics.risks")} value={String(totalRiskCount(reviewPacket))} />
+          <Metric label={t("verification.status")} value={statusLabels[reviewPacket.verification.status]} tone={reviewPacket.verification.status} />
+          <Metric label={t("packet.humanReviewState")} value={reviewPacket.humanReviewValidation.status.toUpperCase()} tone={reviewPacket.humanReviewValidation.status} />
+        </div>
+      </section>
+
+      <section className="report-section" aria-label={t("packet.risksSection")}>
+        <h3>{t("packet.risksSection")}</h3>
+        <div className="severity-row">
+          {(["critical", "high", "medium", "low"] as const).map((severity) => (
+            <span key={severity} className={`severity severity--${severity}`}>
+              {getSeverityLabel(severity, t)} {reviewPacket.riskDelta.before[severity]}
+            </span>
+          ))}
+        </div>
+        <IssueList issues={reviewPacket.original.issues.slice(0, 5)} t={t} emptyLabel={t("packet.noRisks")} />
+      </section>
+
+      <section className="report-section" aria-label={t("packet.patchSection")}>
+        <h3>{t("packet.patchSection")}</h3>
+        <p className="panel-lead">{reviewPacket.patch.proposal.summary}</p>
+        <div className="console-grid">
+          <Metric label={t("toolbar.metrics.patchOps")} value={String(reviewPacket.patch.proposal.operations.length)} />
+          <KeyValue
+            label={t("packet.aiProvenance")}
+            value={reviewPacket.patch.proposalSource?.kind === "ai-assisted" ? t("patch.aiBadge") : t("packet.deterministic")}
+          />
+          <KeyValue
+            label={t("packet.conflictStatus")}
+            value={reviewPacket.patch.proposalSource?.validation?.conflictStatus ?? t("packet.none")}
+          />
+        </div>
+      </section>
+
+      <section className="report-section" aria-label={t("packet.verifierSection")}>
+        <h3>{t("packet.verifierSection")}</h3>
+        <ul className="compact-list">
+          {reviewPacket.verification.checkedGates.map((gate) => (
+            <li key={gate.id}>
+              <span className={`status status--${gate.status}`}>{statusLabels[gate.status]}</span>
+              <strong>{gate.title}</strong>
+              <small>{gate.explanation}</small>
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      <section className="report-section" aria-label={t("packet.humanReviewSection")}>
+        <h3>{t("packet.humanReviewSection")}</h3>
+        <div className="console-grid">
+          <KeyValue label={t("verification.status")} value={reviewPacket.humanReviewValidation.status} />
+          <KeyValue label={t("packet.reviewerDecision")} value={reviewPacket.humanReview.decision} />
+          <KeyValue
+            label={t("packet.unresolvedItems")}
+            value={reviewPacket.humanReviewValidation.missingChecklistItemIds.join(", ") || t("packet.none")}
+          />
+        </div>
+      </section>
+
+      <section className="report-section" aria-label={t("packet.sourceMetadataSection")}>
+        <h3>{t("packet.sourceMetadataSection")}</h3>
+        <div className="console-grid">
+          <KeyValue label="sourcePlatform" value={reviewPacket.source?.sourcePlatform ?? t("packet.none")} />
+          <KeyValue label="sourceKind" value={reviewPacket.source?.sourceKind ?? t("packet.none")} />
+          <KeyValue label="adapterId" value={reviewPacket.source?.adapterId ?? t("packet.none")} />
+          <KeyValue label="importMethod" value={reviewPacket.source?.importMethod ?? t("packet.none")} />
+          <KeyValue label="stability" value={reviewPacket.source?.stability ?? t("packet.none")} />
+          <KeyValue
+            label="redactionSummary"
+            value={
+              reviewPacket.source
+                ? `${reviewPacket.source.redactionSummary.redactedValueCount} ${t("packet.redactedValues")}`
+                : t("packet.none")
+            }
+          />
+        </div>
+      </section>
+
       <div className="console-grid">
         <IssueDeltaList title={t("packet.resolved")} issueIds={reviewPacket.issueDelta.resolvedIssueIds} t={t} />
         <IssueDeltaList title={t("packet.remaining")} issueIds={reviewPacket.issueDelta.remainingIssueIds} t={t} />
         <IssueDeltaList title={t("packet.introduced")} issueIds={reviewPacket.issueDelta.introducedIssueIds} t={t} />
       </div>
+      <section className="report-section" aria-label={t("packet.exportSection")}>
+        <h3>{t("packet.exportSection")}</h3>
+        <div className="report-artifact-grid">
+          <details>
+            <summary>{t("packet.markdownPreview")}</summary>
+            <pre>{reviewReportMarkdown}</pre>
+          </details>
+          <details>
+            <summary>{t("packet.htmlPreview")}</summary>
+            <pre>{reviewReportHtml}</pre>
+          </details>
+          <details>
+            <summary>{t("packet.rawJson")}</summary>
+            <pre>{JSON.stringify(reviewPacket, null, 2)}</pre>
+          </details>
+        </div>
+      </section>
     </div>
   );
+}
+
+function totalRiskCount(reviewPacket: ReturnType<typeof createDoctorReviewPacket>): number {
+  return Object.values(reviewPacket.riskDelta.before).reduce((total, count) => total + count, 0);
 }
 
 function LogsTab({

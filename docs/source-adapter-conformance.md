@@ -9,11 +9,13 @@ Every built-in source adapter must pass the shared conformance expectations befo
 - Sentinel secrets do not leak into `WorkflowIR`.
 - Sentinel secrets do not leak into workspace documents.
 - Sentinel secrets do not leak into Review Packet artifacts.
+- Sentinel secrets do not leak into Markdown Review Reports.
+- Sentinel secrets do not leak into static HTML Review Reports.
 - Sentinel secrets do not leak into AI context.
 - Unknown nodes do not crash import.
 - Broken edges create diagnostics.
 - Source metadata is sanitized.
-- Review Packet records `adapterId`, `sourceKind`, `sourcePlatform`, and `importMethod`.
+- Review Packet and Review Reports record `adapterId`, `sourceKind`, `sourcePlatform`, and `importMethod`.
 - Parser warnings are preserved.
 - `redactionSummary` records redacted or summarized values.
 - Limits are enforced.
@@ -34,3 +36,5 @@ v0.8 applies conformance-style coverage to:
 - Custom Graph JSON
 
 n8n read-only import keeps its existing read-only connection tests and participates in the registry as `n8n.readonlyImport`.
+
+v0.9 adds report export coverage for JSON Review Packet, Markdown Review Report, static HTML Review Report, Review Packet Artifact shape, and AI patch input sentinel checks.

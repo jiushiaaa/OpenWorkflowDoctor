@@ -2,6 +2,23 @@
 
 All notable OpenWorkflowDoctor releases are listed here. OpenWorkflowDoctor reviews workflows; it does not run them.
 
+## v0.9.0 - Review Packet Export Polish
+
+- Preserved canonical JSON Review Packet export.
+- Added Markdown Review Report export.
+- Added static HTML Review Report export with no JavaScript or external assets.
+- Added a readable Review Packet / Report preview area with overview, risks, patch, verifier, human review, source metadata, export controls, and raw JSON access.
+- Added report metadata for report format version, packet schema version, generated timestamp, export kind, review target fingerprint, and adapter metadata.
+- Added stale report warnings when the report fingerprint is outdated.
+- Added secret-safe report export tests for JSON, Markdown, HTML, Review Packet Artifact shape, and AI patch input.
+- Added Review Report export documentation.
+
+Trust boundaries:
+
+- Reports are generated from sanitized Review Packet data only.
+- No raw source artifacts, raw prompts, raw code, raw SQL, credentials, provider keys, native platform patch output, workflow execution, platform write-back, cloud sharing, accounts, teams, comments, or hosted collaboration was added.
+- AI Patch Proposal remains WorkflowIR-only.
+
 ## v0.8.0 - Adapter SDK / Source Adapter Framework
 
 - Added the internal built-in `WorkflowSourceAdapter` contract and static adapter registry.

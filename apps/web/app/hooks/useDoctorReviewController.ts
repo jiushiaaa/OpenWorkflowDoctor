@@ -6,8 +6,11 @@ import {
   createDoctorReportFromWorkflow,
   createDoctorReviewPacket,
   createWorkflowViewModel,
+  renderReviewPacketHtmlReport,
+  renderReviewPacketMarkdownReport,
   validateAiPatchProposalCandidate,
   type AiPatchProposalCandidate,
+  type DoctorReviewPacket,
   type HumanReview,
   type HumanReviewDecision
 } from "@openworkflowdoctor/workflow-ir";
@@ -25,6 +28,14 @@ import type { AiPatchProposalApiResult } from "../api/ai/patch/route";
 const defaultRequest =
   "帮我修复支付和通知相关风险，优先补 webhook 去重和退款幂等性。";
 
+export type ReviewReportDownloadKind = "json" | "markdown" | "html";
+
+export type ReviewReportDownload = {
+  filename: string;
+  mimeType: string;
+  body: string;
+};
+
 export function deriveDoctorReviewState(
   activeDocument: WorkflowDocument | null,
   activeReviewPacketArtifacts: ReviewPacketArtifact[]
@@ -41,6 +52,19 @@ export function deriveDoctorReviewState(
   const humanReviewNote = activeDocument?.humanReviewDraft.reviewerNote ?? "";
   const confirmedChecklistItemIds = activeDocument?.humanReviewDraft.confirmedChecklistItemIds ?? [];
   const reviewPacket = report ? createDoctorReviewPacket(report, undefined, humanReview) : null;
+  const reportExportOptions = reviewPacket
+    ? {
+        currentReviewTargetFingerprint: isReportStale
+          ? `stale-${reviewPacket.reviewTargetFingerprint}`
+          : reviewPacket.reviewTargetFingerprint
+      }
+    : undefined;
+  const reviewReportMarkdown = reviewPacket
+    ? renderReviewPacketMarkdownReport(reviewPacket, reportExportOptions)
+    : null;
+  const reviewReportHtml = reviewPacket
+    ? renderReviewPacketHtmlReport(reviewPacket, reportExportOptions)
+    : null;
   const aiInput: WorkflowExplanationInput | null = report ? buildWorkflowExplanationInput(report) : null;
   const aiPatchProposalInput = report ? buildAiPatchProposalInput(report, { request }) : null;
   const aiPatchProposalState = activeDocument?.aiPatchProposalState ?? createEmptyAiPatchProposalState();
@@ -101,6 +125,8 @@ export function deriveDoctorReviewState(
     humanReviewNote,
     confirmedChecklistItemIds,
     reviewPacket,
+    reviewReportMarkdown,
+    reviewReportHtml,
     aiInput,
     aiPatchProposalInput,
     aiPatchProposalState,
@@ -305,12 +331,17 @@ export function useDoctorReviewController({
     }));
   }
 
-  async function exportReviewPacket() {
+  async function exportReviewPacket(kind: ReviewReportDownloadKind = "json") {
     if (!state.reviewPacket || !state.report || !activeDocument) {
       return;
     }
 
-    downloadJson(`${slugify(state.report.workflow.name)}-review-packet.json`, state.reviewPacket);
+    const download = createReviewReportDownload(kind, state.report.workflow.name, state.reviewPacket, {
+      currentReviewTargetFingerprint: state.isReportStale
+        ? `stale-${state.reviewPacket.reviewTargetFingerprint}`
+        : state.reviewPacket.reviewTargetFingerprint
+    });
+    downloadText(download);
 
     const artifact = createReviewPacketArtifact({
       workflowDocumentId: activeDocument.id,
@@ -398,6 +429,36 @@ export function useDoctorReviewController({
   };
 }
 
+export function createReviewReportDownload(
+  kind: ReviewReportDownloadKind,
+  workflowName: string,
+  packet: DoctorReviewPacket,
+  options = {}
+): ReviewReportDownload {
+  const slug = slugify(workflowName);
+
+  switch (kind) {
+    case "json":
+      return {
+        filename: `${slug}-review-packet.json`,
+        mimeType: "application/json",
+        body: `${JSON.stringify(packet, null, 2)}\n`
+      };
+    case "markdown":
+      return {
+        filename: `${slug}-review-report.md`,
+        mimeType: "text/markdown",
+        body: renderReviewPacketMarkdownReport(packet, options)
+      };
+    case "html":
+      return {
+        filename: `${slug}-review-report.html`,
+        mimeType: "text/html",
+        body: renderReviewPacketHtmlReport(packet, options)
+      };
+  }
+}
+
 function normalizeHumanReview(draft: HumanReview | undefined): HumanReview {
   const humanReview = draft ?? createEmptyHumanReview();
 
@@ -408,16 +469,24 @@ function normalizeHumanReview(draft: HumanReview | undefined): HumanReview {
   };
 }
 
-function downloadJson(filename: string, value: unknown) {
-  const blob = new Blob([`${JSON.stringify(value, null, 2)}\n`], {
-    type: "application/json"
+function downloadText(download: ReviewReportDownload) {
+  const blob = new Blob([download.body], {
+    type: download.mimeType
   });
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement("a");
   anchor.href = url;
-  anchor.download = filename;
+  anchor.download = download.filename;
   anchor.click();
   URL.revokeObjectURL(url);
+}
+
+function downloadJson(filename: string, value: unknown) {
+  downloadText({
+    filename,
+    mimeType: "application/json",
+    body: `${JSON.stringify(value, null, 2)}\n`
+  });
 }
 
 function slugify(value: string) {

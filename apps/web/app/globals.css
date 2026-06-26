@@ -757,6 +757,56 @@ h3 {
   gap: 12px;
 }
 
+.report-preview {
+  align-content: start;
+}
+
+.report-section {
+  display: grid;
+  gap: 10px;
+  border-top: 1px solid #edf1f6;
+  padding-top: 12px;
+}
+
+.severity-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.report-artifact-grid {
+  display: grid;
+  gap: 8px;
+}
+
+.report-artifact-grid details {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+}
+
+.report-artifact-grid summary {
+  padding: 9px 10px;
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.report-artifact-grid pre {
+  max-height: 260px;
+  margin: 0;
+  border-top: 1px solid var(--border);
+  padding: 10px;
+  overflow: auto;
+  background: var(--surface-subtle);
+  color: var(--text);
+  font-size: 11px;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
 .console-toolbar {
   display: flex;
   align-items: center;

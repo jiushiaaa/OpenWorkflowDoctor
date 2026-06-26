@@ -14,6 +14,7 @@ export * from "./patch-diff.js";
 export * from "./patch-proposal.js";
 export * from "./risk-rules.js";
 export * from "./review-packet.js";
+export * from "./review-report-export.js";
 export * from "./structured-output.js";
 export * from "./summary.js";
 export * from "./source-adapter-registry.js";

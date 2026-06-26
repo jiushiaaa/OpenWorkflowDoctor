@@ -1,7 +1,7 @@
 import { createDoctorReport, type HumanReview, type WorkflowIR } from "@openworkflowdoctor/workflow-ir";
 import { describe, expect, test } from "vitest";
 import type { ReviewPacketArtifact, WorkflowDocument } from "../lib/workspace-store";
-import { deriveDoctorReviewState } from "./useDoctorReviewController";
+import { createReviewReportDownload, deriveDoctorReviewState } from "./useDoctorReviewController";
 
 const workflow: WorkflowIR = {
   name: "Tiny Workflow",
@@ -90,5 +90,42 @@ describe("deriveDoctorReviewState", () => {
     };
 
     expect(deriveDoctorReviewState(createDocument({ latestReport: report, latestReportState: "ready" }), [matchingArtifact]).currentPacketArtifact?.id).toBe("packet-1");
+  });
+
+  test("marks generated report previews stale when the active document report is stale", () => {
+    const report = createDoctorReport({ name: "Broken", nodes: "bad", connections: null }, "检查风险");
+    const state = deriveDoctorReviewState(
+      createDocument({
+        latestReport: report,
+        latestReportState: "stale"
+      }),
+      []
+    );
+
+    expect(state.reviewReportMarkdown).toContain("Stale report warning");
+    expect(state.reviewReportHtml).toContain("Report generated for previous source fingerprint");
+  });
+
+  test("creates JSON, Markdown, and HTML review report download descriptors", () => {
+    const report = createDoctorReport({ name: "Download Workflow", nodes: "bad", connections: null }, "检查风险");
+    const packet = deriveDoctorReviewState(
+      createDocument({
+        latestReport: report,
+        latestReportState: "ready"
+      }),
+      []
+    ).reviewPacket!;
+
+    expect(createReviewReportDownload("json", "Download Workflow", packet).filename).toBe(
+      "download-workflow-review-packet.json"
+    );
+    expect(createReviewReportDownload("markdown", "Download Workflow", packet)).toMatchObject({
+      filename: "download-workflow-review-report.md",
+      mimeType: "text/markdown"
+    });
+    expect(createReviewReportDownload("html", "Download Workflow", packet)).toMatchObject({
+      filename: "download-workflow-review-report.html",
+      mimeType: "text/html"
+    });
   });
 });

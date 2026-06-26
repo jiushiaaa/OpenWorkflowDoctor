@@ -4,7 +4,7 @@ OpenWorkflowDoctor is a local-first Workflow Review IDE for existing workflow ar
 
 ## Current Freeze Candidate
 
-`v0.8.0` is the current freeze candidate: Adapter SDK / Source Adapter Framework. It stabilizes built-in source adapters, shared guardrails, redaction, conformance tests, registry-driven UI, and Custom Graph JSON while preserving the same review-only WorkflowIR boundary.
+`v0.9.0` is the current freeze candidate: Review Packet Export Polish. It preserves the canonical JSON Review Packet and adds Markdown/static HTML Review Reports, readable report preview UI, stale report warnings, adapter metadata in reports, and secret-safe export coverage.
 
 The current product loop is:
 
@@ -12,7 +12,7 @@ The current product loop is:
 import exported n8n workflow, read-only n8n workflow, Dify DSL YAML, Coze definition JSON, or Custom Graph JSON
   -> parse into secret-safe WorkflowIR
   -> run static diagnostics
-  -> generate Review Packet
+  -> generate JSON/Markdown/HTML review artifacts
   -> optionally request advisory AI explanation
   -> optionally request constrained AI PatchOperation proposal
   -> validate with Zod, semantic checks, and conflict detection
@@ -151,7 +151,28 @@ Non-goals:
 - Platform write-back or native platform patch export.
 - Workflow execution, runtime logs, credential inspection, runtime plugin execution, or cloud sync.
 
-## v0.9.0+ - Planned: Execution Logs and Observability Analysis
+## v0.9.0 - Freeze Candidate: Review Packet Export Polish
+
+Scope:
+
+- Preserve existing JSON Review Packet export.
+- Add Markdown Review Report export.
+- Add static HTML Review Report export with no JavaScript or external assets.
+- Add readable Review Packet / Report preview sections in the workbench.
+- Include adapter metadata, source warnings, redaction summary, verifier result, human review state, and review target fingerprint in reports.
+- Mark stale reports when the active report fingerprint is outdated.
+- Add sentinel tests for JSON, Markdown, HTML, Review Packet Artifact shape, and AI patch input.
+
+Non-goals:
+
+- New workflow source platforms.
+- Workflow execution.
+- Platform write-back.
+- Credential inspection.
+- Platform-native patch export.
+- Cloud sharing, accounts, teams, comments, or hosted collaboration.
+
+## v0.10.0+ - Planned: Execution Logs and Observability Analysis
 
 Possible later scope:
 
