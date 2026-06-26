@@ -4,11 +4,11 @@ Local-first Workflow Review IDE for existing workflow artifacts.
 
 OpenWorkflowDoctor reviews workflows. It does not run them.
 
-Current release line: `v0.7.0` Coze Workflow Definition JSON Import.
+Current release line: `v0.8.0` Adapter SDK / Source Adapter Framework.
 
 It is not a workflow builder, workflow runtime, automatic n8n fixer, or production n8n mutator.
 
-It turns exported n8n JSON, optional read-only n8n imports, Dify DSL YAML, or Coze workflow definition JSON into a secret-safe WorkflowIR, static risk report, structured patch preview, verifier result, human review checklist, and exportable Review Packet.
+It turns exported n8n JSON, optional read-only n8n imports, Dify DSL YAML, Coze workflow definition JSON, or Custom Graph JSON into a secret-safe WorkflowIR, static risk report, structured patch preview, verifier result, human review checklist, and exportable Review Packet.
 
 AI can explain and propose structured `PatchOperation` candidates, but deterministic validation, verifier gates, and human review remain required.
 
@@ -20,6 +20,7 @@ AI can explain and propose structured `PatchOperation` candidates, but determini
 - Optionally imports workflows from n8n through read-only workflow API calls.
 - Imports Dify DSL YAML as a local diagnosis-only review copy.
 - Imports Coze workflow definition JSON as a local diagnosis-only review copy.
+- Imports safe declarative Custom Graph JSON as a local diagnosis-only review copy.
 - Shows graph structure, static risks, patch previews, verifier gates, and review packets.
 - Keeps AI suggestions reviewable and bounded by structured validation.
 - Never executes workflows, reads credentials, writes back to n8n, Dify, or Coze, activates/deactivates workflows, or exports platform-importable patched workflows.
@@ -73,6 +74,7 @@ For local deployment details, see [Local Deployment](docs/local-deployment.md). 
 - Import selected workflows from n8n as local read-only review copies.
 - Import Dify DSL `.yml` / `.yaml` files as local diagnosis-only review copies.
 - Import Coze workflow definition `.json` files as local diagnosis-only review copies.
+- Import Custom Graph `.json` files through the built-in declarative adapter.
 - Parse workflow JSON into secret-safe `WorkflowIR`.
 - Store multiple workflow reviews in a local IndexedDB workspace.
 - Switch active workflows from Workflow Explorer without rerunning Doctor.
@@ -102,6 +104,7 @@ OpenWorkflowDoctor is local-first and review-first.
 - n8n read-only import uses only workflow list/get endpoints with `excludePinnedData=true`.
 - Dify DSL import parses local YAML only and never calls Dify APIs, fetches resources, executes workflows, publishes, or writes back.
 - Coze definition import parses local JSON only and never calls Coze APIs, fetches resources, executes workflows, publishes, or writes back.
+- Custom Graph JSON import is declarative only and never executes JavaScript, mapping rules, remote schemas, or plugins.
 - Static diagnostics and deterministic patch generation work without an LLM.
 - AI Explainer remains advisory-only.
 - AI Patch Proposal can propose validated structured changes, but it cannot apply patches, mutate raw n8n JSON, change verifier status, or change human review.
@@ -136,18 +139,19 @@ Out of scope for the current MVP:
 | v0.5.2 | Frozen | Onboarding, Docker Compose local deployment, demo mode, troubleshooting, and reset polish. |
 | v0.6.0 | Frozen | Dify DSL YAML Import. Import only, no Dify API, no execution, no publish, and no write-back. |
 | v0.6.1 | Frozen | Dify read-only import feasibility only. No shipped Dify API connection or user-facing import surface. |
-| v0.7.0 | Freeze candidate | Coze Workflow Definition JSON Import. Import only, no Coze API, no execution, no resource fetch, no publish, and no write-back. |
+| v0.7.0 | Frozen | Coze Workflow Definition JSON Import. Import only, no Coze API, no execution, no resource fetch, no publish, and no write-back. |
+| v0.8.0 | Freeze candidate | Adapter SDK / Source Adapter Framework. Static built-in adapters, unified import pipeline, shared guardrails, conformance kit, and Custom Graph JSON. |
 
-The current product definition through v0.7.0:
+The current product definition through v0.8.0:
 
-OpenWorkflowDoctor is a local-first Workflow Review IDE. It supports importing multiple workflows from n8n JSON, optional read-only n8n workflow reads, Dify DSL YAML, or Coze definition JSON, running static diagnostics, previewing WorkflowIR patches, reviewing verifier output, recording human review, exporting Review Packets, generating advisory AI explanations, and requesting constrained AI PatchOperation proposals through configurable BYOK providers. AI never participates in final acceptance.
+OpenWorkflowDoctor is a local-first Workflow Review IDE. It supports importing multiple workflows from n8n JSON, optional read-only n8n workflow reads, Dify DSL YAML, Coze definition JSON, or Custom Graph JSON, running static diagnostics, previewing WorkflowIR patches, reviewing verifier output, recording human review, exporting Review Packets, generating advisory AI explanations, and requesting constrained AI PatchOperation proposals through configurable BYOK providers. AI never participates in final acceptance.
 
 ## Architecture
 
 The product follows this flow:
 
 ```text
-n8n JSON / n8n read-only / Dify DSL / Coze definition JSON
+n8n JSON / n8n read-only / Dify DSL / Coze definition JSON / Custom Graph JSON
   -> secret-safe WorkflowIR
   -> graph view model + summary + diagnostics
   -> structured patch proposal + readable diff
@@ -157,7 +161,7 @@ n8n JSON / n8n read-only / Dify DSL / Coze definition JSON
   -> human accept / hold / reject
 ```
 
-For read-only n8n import details, see [v0.5 Read-only n8n Import](docs/n8n-readonly-import.md). For Dify YAML import details, see [v0.6 Dify DSL Import](docs/dify-dsl-import.md). For Coze JSON import details, see [v0.7 Coze Workflow Definition Import](docs/coze-definition-import.md). For deferred Dify read-only import analysis, see [v0.6.1 Dify Read-only Import Feasibility](docs/dify-readonly-import-feasibility.md). For real-instance validation, see [Real n8n Import Smoke Test](docs/real-n8n-import-smoke-test.md). For public demo readiness, see [Public Demo Checklist](docs/public-demo-checklist.md).
+For adapter framework details, see [Adapter SDK](docs/adapter-sdk.md), [Custom Graph JSON Import](docs/custom-graph-json-import.md), and [Source Adapter Conformance](docs/source-adapter-conformance.md). For read-only n8n import details, see [v0.5 Read-only n8n Import](docs/n8n-readonly-import.md). For Dify YAML import details, see [v0.6 Dify DSL Import](docs/dify-dsl-import.md). For Coze JSON import details, see [v0.7 Coze Workflow Definition Import](docs/coze-definition-import.md). For deferred Dify read-only import analysis, see [v0.6.1 Dify Read-only Import Feasibility](docs/dify-readonly-import-feasibility.md). For real-instance validation, see [Real n8n Import Smoke Test](docs/real-n8n-import-smoke-test.md).
 
 Core rules:
 
@@ -177,6 +181,7 @@ Core rules:
 - `samples/n8n`: demo exported workflow JSON.
 - `samples/dify`: demo Dify DSL YAML.
 - `samples/coze`: demo Coze workflow definition JSON.
+- `samples/custom-graph`: demo Custom Graph JSON.
 
 ## Local Development
 

@@ -1,0 +1,58 @@
+{
+  "name": "Support Escalation Review",
+  "sourceMetadata": {
+    "system": "example-helpdesk",
+    "owner": "support-ops"
+  },
+  "nodes": [
+    {
+      "id": "start",
+      "label": "Ticket Created",
+      "type": "trigger",
+      "configSummary": {
+        "event": "ticket.created"
+      }
+    },
+    {
+      "id": "triage",
+      "label": "Triage Request",
+      "type": "llm",
+      "description": "Summarizes the ticket and chooses an escalation path.",
+      "configSummary": {
+        "rawPrompt": "Redacted by adapter before persistence.",
+        "model": "support-triage"
+      }
+    },
+    {
+      "id": "notify",
+      "label": "Notify Support Lead",
+      "type": "notification",
+      "configSummary": {
+        "channel": "support-leads",
+        "authHeaderPresent": true
+      }
+    },
+    {
+      "id": "end",
+      "label": "Close Review Path",
+      "type": "end"
+    }
+  ],
+  "edges": [
+    {
+      "source": "start",
+      "target": "triage",
+      "label": "main"
+    },
+    {
+      "source": "triage",
+      "target": "notify",
+      "label": "escalate"
+    },
+    {
+      "source": "notify",
+      "target": "end",
+      "label": "main"
+    }
+  ]
+}

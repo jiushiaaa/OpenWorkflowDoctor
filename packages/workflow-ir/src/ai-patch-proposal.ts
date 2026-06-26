@@ -391,6 +391,7 @@ function summarizeNodeType(type: string): string {
 
 function redactUnsafeText(value: string): string {
   return value
+    .replace(/SECRET_[A-Z0-9_]*SHOULD_NOT_LEAK/gi, "[redacted]")
     .replace(/sk-[a-z0-9_-]+/gi, "[redacted]")
     .replace(/bearer\s+[a-z0-9._-]+/gi, "Bearer [redacted]")
     .replace(/token=[^&\s]+/gi, "token=[redacted]");

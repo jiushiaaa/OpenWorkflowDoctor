@@ -3,6 +3,7 @@ import {
   createDoctorReviewPacket,
   importCozeDefinitionWorkflow,
   importDifyDslWorkflow,
+  importWorkflowSourceArtifact,
   parseN8nWorkflow
 } from "@openworkflowdoctor/workflow-ir";
 import { describe, expect, test } from "vitest";
@@ -481,6 +482,69 @@ workflow:
     expect(serialized).not.toContain("nodeMeta");
     expect(serialized).not.toContain("SECRET_COZE_PLUGIN_ID_SHOULD_NOT_LEAK");
     expect(serialized).not.toContain("SECRET_COZE_TOKEN_SHOULD_NOT_LEAK");
+  });
+
+  test("creates Custom Graph JSON workflow documents from sanitized adapter import results", () => {
+    const imported = importWorkflowSourceArtifact({
+      adapterId: "custom.graphJson",
+      fileName: "custom-support.json",
+      mimeType: "application/json",
+      content: JSON.stringify({
+        name: "Custom Support",
+        sourceMetadata: {
+          workspaceId: "SECRET_CUSTOM_WORKSPACE_ID_SHOULD_NOT_LEAK"
+        },
+        nodes: [
+          {
+            id: "start",
+            label: "Start",
+            type: "trigger",
+            configSummary: {
+              webhookPath: "SECRET_CUSTOM_WEBHOOK_PATH_SHOULD_NOT_LEAK"
+            }
+          },
+          {
+            id: "end",
+            label: "End",
+            type: "end",
+            configSummary: {
+              rawPrompt: "SECRET_CUSTOM_PROMPT_SHOULD_NOT_LEAK"
+            }
+          }
+        ],
+        edges: [
+          {
+            source: "start",
+            target: "end"
+          }
+        ]
+      })
+    });
+    const document = createWorkflowDocumentFromWorkflowIr({
+      workflow: imported.workflowIR,
+      sourceKind: imported.sourceMetadata.sourceKind,
+      sourceLabel: "custom-support.json",
+      sourceMetadata: imported.sourceMetadata
+    });
+    const report = createDoctorReportFromWorkflow(document.originalWorkflowIr, "检查 Custom Graph");
+    const artifact = createReviewPacketArtifact({
+      workflowDocumentId: document.id,
+      packet: createDoctorReviewPacket(report)
+    });
+    const serialized = JSON.stringify({ document, artifact });
+
+    expect(document.sourceKind).toBe("custom-graph-json");
+    expect(document.sourceMetadata).toMatchObject({
+      adapterId: "custom.graphJson",
+      sourceKind: "custom-graph-json",
+      sourcePlatform: "custom",
+      importMethod: "manual-artifact",
+      stability: "experimental"
+    });
+    expect(serialized).not.toContain("SECRET_CUSTOM_WORKSPACE_ID_SHOULD_NOT_LEAK");
+    expect(serialized).not.toContain("SECRET_CUSTOM_WEBHOOK_PATH_SHOULD_NOT_LEAK");
+    expect(serialized).not.toContain("SECRET_CUSTOM_PROMPT_SHOULD_NOT_LEAK");
+    expect(serialized).not.toContain("sourceMetadata\":{\"workspaceId\"");
   });
 
   test("rejects raw imported workflow fields in stored workflow documents", () => {

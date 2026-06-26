@@ -4,7 +4,7 @@ export const DEFAULT_LANGUAGE: Language = "zh-CN";
 
 export const dictionaries = {
   "zh-CN": {
-    "app.version": "OpenWorkflowDoctor v0.7.0",
+    "app.version": "OpenWorkflowDoctor v0.8.0",
     "toolbar.commandPalette": "命令面板",
     "toolbar.settings": "设置",
     "toolbar.metrics.nodes": "节点",
@@ -29,6 +29,8 @@ export const dictionaries = {
     "sidebar.previewTitle": "WorkflowIR 补丁预览",
     "sidebar.previewBody": "这不会修改 n8n，也不会导出可导入 n8n 的 JSON。",
     "sidebar.localStaticCopy": "面向导入工作流定义的本地静态审查。它只产出可审查工件，不执行工作流、不读取凭据、不修改源平台。",
+    "source.patchPreviewBoundary": "Patch proposals are WorkflowIR previews for human review. OpenWorkflowDoctor does not write changes back to source platforms.",
+    "source.supportedSources": "支持的来源",
     "steps.import": "导入",
     "steps.diagnose": "诊断",
     "steps.patchPreview": "补丁预览",
@@ -36,6 +38,7 @@ export const dictionaries = {
     "steps.humanReview": "人工审查",
     "steps.exportPacket": "导出审查包",
     "actions.importJson": "导入 JSON",
+    "actions.importSource": "导入",
     "actions.importDifyDsl": "导入 Dify DSL",
     "actions.importCozeDefinition": "导入 Coze Definition JSON",
     "actions.importFromN8n": "从 n8n 导入",
@@ -311,7 +314,7 @@ export const dictionaries = {
     "coze.warningBody": "Imported for diagnosis only. OpenWorkflowDoctor will not connect to Coze, run, publish, fetch resources, or write back."
   },
   "en-US": {
-    "app.version": "OpenWorkflowDoctor v0.7.0",
+    "app.version": "OpenWorkflowDoctor v0.8.0",
     "toolbar.commandPalette": "Command Palette",
     "toolbar.settings": "Settings",
     "toolbar.metrics.nodes": "Nodes",
@@ -336,6 +339,8 @@ export const dictionaries = {
     "sidebar.previewTitle": "WorkflowIR Patch Preview",
     "sidebar.previewBody": "This does not modify n8n and does not export n8n-importable JSON.",
     "sidebar.localStaticCopy": "Local static review for imported workflow definitions. It produces reviewable artifacts without running workflows, reading credentials, or changing the source platform.",
+    "source.patchPreviewBoundary": "Patch proposals are WorkflowIR previews for human review. OpenWorkflowDoctor does not write changes back to source platforms.",
+    "source.supportedSources": "Supported sources",
     "steps.import": "Import",
     "steps.diagnose": "Diagnose",
     "steps.patchPreview": "Patch Preview",
@@ -343,6 +348,7 @@ export const dictionaries = {
     "steps.humanReview": "Human Review",
     "steps.exportPacket": "Export Packet",
     "actions.importJson": "Import JSON",
+    "actions.importSource": "Import",
     "actions.importDifyDsl": "Import Dify DSL",
     "actions.importCozeDefinition": "Import Coze Definition JSON",
     "actions.importFromN8n": "Import from n8n",

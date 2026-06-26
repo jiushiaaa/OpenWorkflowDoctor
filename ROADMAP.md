@@ -4,12 +4,12 @@ OpenWorkflowDoctor is a local-first Workflow Review IDE for existing workflow ar
 
 ## Current Freeze Candidate
 
-`v0.7.0` is the current freeze candidate: Coze Workflow Definition JSON Import. It adds local manual Coze definition import while preserving the same review-only WorkflowIR boundary.
+`v0.8.0` is the current freeze candidate: Adapter SDK / Source Adapter Framework. It stabilizes built-in source adapters, shared guardrails, redaction, conformance tests, registry-driven UI, and Custom Graph JSON while preserving the same review-only WorkflowIR boundary.
 
 The current product loop is:
 
 ```text
-import exported n8n workflow, read-only n8n workflow, Dify DSL YAML, or Coze definition JSON
+import exported n8n workflow, read-only n8n workflow, Dify DSL YAML, Coze definition JSON, or Custom Graph JSON
   -> parse into secret-safe WorkflowIR
   -> run static diagnostics
   -> generate Review Packet
@@ -129,7 +129,29 @@ Non-goals:
 - Raw Coze JSON persistence.
 - Coze-importable patched workflow export.
 
-## v0.8.0+ - Planned: Execution Logs and Observability Analysis
+## v0.8.0 - Freeze Candidate: Adapter SDK / Source Adapter Framework
+
+Scope:
+
+- Stable internal `WorkflowSourceAdapter` contract.
+- Static built-in adapter registry.
+- Unified file/manual artifact import pipeline.
+- Shared redaction and guardrails.
+- Source metadata in WorkflowIR, workspace, UI, AI-safe context, Verifier flow, and Review Packet.
+- Adapter conformance test kit.
+- Built-in Custom Graph JSON adapter and sample.
+- Registry-driven import menu, supported sources panel, and source badges.
+
+Non-goals:
+
+- Third-party executable adapters.
+- Adapter plugin marketplace.
+- Remote adapter loading.
+- User-uploaded JavaScript adapters.
+- Platform write-back or native platform patch export.
+- Workflow execution, runtime logs, credential inspection, runtime plugin execution, or cloud sync.
+
+## v0.9.0+ - Planned: Execution Logs and Observability Analysis
 
 Possible later scope:
 

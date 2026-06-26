@@ -1,5 +1,10 @@
 import { createParameterSummary, formatRedactedValue, REDACTED_PREVIEW } from "./redaction.js";
-import type { WorkflowSourceAdapter, WorkflowSourceAdapterInput } from "./workflow-source-adapter.js";
+import {
+  acceptsInputByExtensionAndMime,
+  createAdapterImportResult,
+  type WorkflowSourceAdapter,
+  type WorkflowSourceAdapterInput
+} from "./workflow-source-adapter.js";
 import type {
   EdgeIR,
   NodeIR,
@@ -100,20 +105,36 @@ const KNOWN_COZE_NODE_TYPES = new Map<string, string>([
 ]);
 
 export const cozeDefinitionSourceAdapter: WorkflowSourceAdapter = {
+  adapterId: "coze.definitionJson",
   id: "coze-definition",
   label: "Coze Definition JSON",
   sourceKind: "coze-definition",
-  acceptsFile(fileName) {
-    return fileName.toLowerCase().endsWith(".json");
+  sourcePlatform: "coze",
+  importMethod: "manual-artifact",
+  stability: "best-effort",
+  acceptedInputs: {
+    extensions: [".json"],
+    mimeTypes: ["application/json", "text/json", ""]
   },
-  parseToWorkflowIR(input) {
-    return importCozeDefinitionWorkflow(input).workflow;
+  trustModel: "untrusted-user-artifact",
+  capabilities: ["file-upload", "manual-artifact", "source-diagnostics", "source-metadata", "review-packet-metadata"],
+  limits: {
+    maxFileBytes: MAX_COZE_DEFINITION_BYTES,
+    maxNodes: MAX_COZE_NODE_COUNT,
+    maxEdges: MAX_COZE_EDGE_COUNT,
+    maxNestedDepth: MAX_COZE_NESTED_BLOCK_DEPTH
   },
-  buildSourceMetadata(input) {
-    return importCozeDefinitionWorkflow(input).metadata;
+  acceptsFile(fileName, mimeType) {
+    return acceptsInputByExtensionAndMime(this.acceptedInputs, fileName, mimeType);
   },
-  redactionSummary(input) {
-    return importCozeDefinitionWorkflow(input).metadata.redactionSummary;
+  import(input) {
+    const imported = importCozeDefinitionWorkflow(input);
+    return createAdapterImportResult({
+      adapter: this,
+      input,
+      workflowIR: imported.workflow,
+      sourceMetadata: imported.metadata
+    });
   }
 };
 
@@ -470,8 +491,11 @@ function buildMetadata({
   redactionSummary: RedactionSummary;
 }): WorkflowSourceMetadata {
   return {
+    adapterId: "coze.definitionJson",
     sourceKind: "coze-definition",
     sourcePlatform: "coze",
+    importMethod: "manual-artifact",
+    stability: "best-effort",
     sourceVersion: artifactShape,
     sourceLabel: input.fileName,
     app: {

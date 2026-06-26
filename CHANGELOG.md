@@ -2,6 +2,20 @@
 
 All notable OpenWorkflowDoctor releases are listed here. OpenWorkflowDoctor reviews workflows; it does not run them.
 
+## v0.8.0 - Adapter SDK / Source Adapter Framework
+
+- Added the internal built-in `WorkflowSourceAdapter` contract and static adapter registry.
+- Added the unified source artifact import pipeline for file/manual imports.
+- Added shared adapter metadata for WorkflowIR, workspace documents, UI badges, AI-safe context, Verifier flow, and Review Packets.
+- Added shared source adapter conformance tests.
+- Added the built-in Custom Graph JSON adapter and sample artifact.
+- Added adapter SDK, Custom Graph JSON, and conformance documentation.
+
+Trust boundaries:
+
+- No public plugin system, user-uploaded JavaScript adapter, remote adapter loading, adapter marketplace, workflow execution, platform write-back, credential inspection, runtime plugin execution, or cloud sync was added.
+- AI Patch Proposal remains WorkflowIR-only.
+
 ## v0.7.0 - Coze Workflow Definition Import
 
 - Added manual Coze workflow definition JSON import.

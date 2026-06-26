@@ -1,6 +1,6 @@
 {
   "name": "@openworkflowdoctor/web",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -10,8 +10,8 @@
     "typecheck": "next typegen && tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
-    "@openworkflowdoctor/workflow-ai": "0.7.0",
-    "@openworkflowdoctor/workflow-ir": "0.7.0",
+    "@openworkflowdoctor/workflow-ai": "0.8.0",
+    "@openworkflowdoctor/workflow-ir": "0.8.0",
     "@xyflow/react": "^12.6.4",
     "next": "^15.1.4",
     "react": "^19.0.0",

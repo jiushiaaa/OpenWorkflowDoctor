@@ -27,7 +27,15 @@ export type CredentialReferenceSummary = {
   credentialCount: number;
 };
 
-export type WorkflowSourceKind = "n8n-json" | "n8n-readonly" | "dify-dsl" | "coze-definition";
+export type WorkflowSourceKind =
+  | "n8n-exported-json"
+  | "n8n-readonly"
+  | "dify-dsl"
+  | "coze-definition"
+  | "custom-graph-json";
+export type WorkflowSourcePlatform = "n8n" | "dify" | "coze" | "custom";
+export type WorkflowImportMethod = "file-upload" | "read-only-connection" | "manual-artifact" | "sample";
+export type WorkflowSourceStability = "stable" | "experimental" | "best-effort";
 
 export type RedactionSummary = {
   redactedValueCount: number;
@@ -44,8 +52,11 @@ export type WorkflowSourceDiagnostic = {
 };
 
 export type WorkflowSourceMetadata = {
+  adapterId: string;
   sourceKind: WorkflowSourceKind;
-  sourcePlatform: string;
+  sourcePlatform: WorkflowSourcePlatform;
+  importMethod: WorkflowImportMethod;
+  stability: WorkflowSourceStability;
   sourceVersion?: string;
   sourceAppMode?: string;
   sourceLabel?: string;

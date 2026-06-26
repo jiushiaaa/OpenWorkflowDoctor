@@ -62,7 +62,7 @@ describe("local deployment files", () => {
     expect(readme).not.toContain("direct Dify connection");
   });
 
-  test("version metadata stays aligned for v0.7.0", () => {
+  test("version metadata stays aligned for v0.8.0", () => {
     const packageFiles = [
       "package.json",
       "apps/web/package.json",
@@ -76,17 +76,17 @@ describe("local deployment files", () => {
         dependencies?: Record<string, string>;
       };
 
-      expect(manifest.version).toBe("0.7.0");
-      expect(manifest.dependencies?.["@openworkflowdoctor/workflow-ai"]).not.toBe("0.6.1");
-      expect(manifest.dependencies?.["@openworkflowdoctor/workflow-ir"]).not.toBe("0.6.1");
+      expect(manifest.version).toBe("0.8.0");
+      expect(manifest.dependencies?.["@openworkflowdoctor/workflow-ai"]).not.toBe("0.7.0");
+      expect(manifest.dependencies?.["@openworkflowdoctor/workflow-ir"]).not.toBe("0.7.0");
     }
 
     const lockfile = readProjectFile("package-lock.json");
     const roadmap = readProjectFile("ROADMAP.md");
-    expect(lockfile).toContain('"version": "0.7.0"');
-    expect(lockfile).not.toContain('"@openworkflowdoctor/workflow-ir": "0.6.1"');
-    expect(lockfile).not.toContain('"@openworkflowdoctor/workflow-ai": "0.6.1"');
-    expect(roadmap).toContain("`v0.7.0` is the current freeze candidate");
+    expect(lockfile).toContain('"version": "0.8.0"');
+    expect(lockfile).not.toContain('"@openworkflowdoctor/workflow-ir": "0.7.0"');
+    expect(lockfile).not.toContain('"@openworkflowdoctor/workflow-ai": "0.7.0"');
+    expect(roadmap).toContain("`v0.8.0` is the current freeze candidate");
   });
 
   test("GitHub Actions Docker smoke workflow builds, starts, probes, and cleans up Compose", () => {

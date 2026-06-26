@@ -216,6 +216,30 @@ h3 {
   background: var(--surface-subtle);
 }
 
+.compact-source-list {
+  display: grid;
+  gap: 7px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.compact-source-list li {
+  display: grid;
+  gap: 2px;
+}
+
+.compact-source-list span {
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.compact-source-list small {
+  color: var(--muted);
+  font-size: 12px;
+}
+
 .workflow-explorer {
   display: grid;
   gap: 10px;

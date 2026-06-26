@@ -20,6 +20,12 @@ export function diagnoseWorkflow(workflow: WorkflowIR): RiskIssue[] {
   if (workflow.source?.sourceKind === "coze-definition") {
     issues.push(...diagnoseCozeWorkflow(workflow));
   }
+  if (workflow.source?.sourceKind === "custom-graph-json") {
+    issues.push(...diagnoseCustomGraphWorkflow(workflow));
+  }
+  if (workflow.source?.sourceKind === "n8n-exported-json" || workflow.source?.sourceKind === "n8n-readonly") {
+    issues.push(...diagnoseN8nSourceWorkflow(workflow));
+  }
 
   for (const node of getIsolatedNodes(workflow)) {
     issues.push(
@@ -458,6 +464,30 @@ function diagnoseCozeWorkflow(workflow: WorkflowIR): RiskIssue[] {
   return issues;
 }
 
+function diagnoseCustomGraphWorkflow(workflow: WorkflowIR): RiskIssue[] {
+  return (workflow.source?.diagnostics ?? []).map((diagnostic) => ({
+    id: createCustomGraphDiagnosticIssueId(diagnostic.code, diagnostic.nodeId, diagnostic.evidence),
+    severity: diagnostic.severity,
+    ...(diagnostic.nodeId ? { nodeId: diagnostic.nodeId } : {}),
+    title: createCustomGraphDiagnosticTitle(diagnostic.code),
+    explanation: diagnostic.message,
+    suggestedFix: createCustomGraphDiagnosticFix(diagnostic.code),
+    evidence: diagnostic.evidence
+  }));
+}
+
+function diagnoseN8nSourceWorkflow(workflow: WorkflowIR): RiskIssue[] {
+  return (workflow.source?.diagnostics ?? []).map((diagnostic) => ({
+    id: createN8nDiagnosticIssueId(diagnostic.code, diagnostic.nodeId, diagnostic.evidence),
+    severity: diagnostic.severity,
+    ...(diagnostic.nodeId ? { nodeId: diagnostic.nodeId } : {}),
+    title: createN8nDiagnosticTitle(diagnostic.code),
+    explanation: diagnostic.message,
+    suggestedFix: createN8nDiagnosticFix(diagnostic.code),
+    evidence: diagnostic.evidence
+  }));
+}
+
 function createNodeIssue(ruleId: string, input: RiskFactoryInput): RiskIssue {
   return {
     id: `${ruleId}:${input.node.id}`,
@@ -575,6 +605,68 @@ function createCozeDiagnosticFix(code: string): string {
       return "Reduce composite nesting or review the skipped nested blocks manually.";
     default:
       return "Review the source Coze definition and re-export a valid workflow definition.";
+  }
+}
+
+function createCustomGraphDiagnosticIssueId(code: string, nodeId: string | undefined, evidence: string[]): string {
+  if (code === "custom_graph_broken_edge") {
+    const source = evidence.find((item) => item.startsWith("Source: "))?.replace("Source: ", "") || "unknown";
+    const target = evidence.find((item) => item.startsWith("Target: "))?.replace("Target: ", "") || "unknown";
+    return `${code}:${source}:${target}`;
+  }
+  return nodeId ? `${code}:${nodeId}` : code;
+}
+
+function createCustomGraphDiagnosticTitle(code: string): string {
+  switch (code) {
+    case "custom_graph_broken_edge":
+      return "Custom Graph edge references an unknown node";
+    case "custom_graph_unknown_node_type":
+      return "Custom Graph node type is unknown";
+    default:
+      return "Custom Graph import warning";
+  }
+}
+
+function createCustomGraphDiagnosticFix(code: string): string {
+  switch (code) {
+    case "custom_graph_broken_edge":
+      return "Reconnect or remove the broken edge in the source graph artifact.";
+    case "custom_graph_unknown_node_type":
+      return "Map the node to a known Custom Graph category or review it manually.";
+    default:
+      return "Review the Custom Graph JSON artifact and re-import a valid graph.";
+  }
+}
+
+function createN8nDiagnosticIssueId(code: string, nodeId: string | undefined, evidence: string[]): string {
+  if (code === "n8n_broken_edge") {
+    const source = evidence.find((item) => item.startsWith("Source: "))?.replace("Source: ", "") || "unknown";
+    const target = evidence.find((item) => item.startsWith("Target: "))?.replace("Target: ", "") || "unknown";
+    return `${code}:${source}:${target}`;
+  }
+  return nodeId ? `${code}:${nodeId}` : code;
+}
+
+function createN8nDiagnosticTitle(code: string): string {
+  switch (code) {
+    case "n8n_broken_edge":
+      return "n8n connection references an unknown node";
+    case "n8n_unknown_node_type":
+      return "n8n node type is unknown";
+    default:
+      return "n8n import warning";
+  }
+}
+
+function createN8nDiagnosticFix(code: string): string {
+  switch (code) {
+    case "n8n_broken_edge":
+      return "Reconnect or remove the broken connection in the source n8n workflow.";
+    case "n8n_unknown_node_type":
+      return "Review this custom or community node manually before accepting patches.";
+    default:
+      return "Review the source n8n workflow and re-import a valid export.";
   }
 }
 

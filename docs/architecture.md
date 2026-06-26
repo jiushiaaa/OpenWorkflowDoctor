@@ -1,6 +1,23 @@
 # OpenWorkflowDoctor Architecture
 
-OpenWorkflowDoctor is a Workflow Reliability IDE for existing workflow artifacts. The MVP reads exported n8n workflow JSON, optional read-only n8n workflow definitions, Dify DSL YAML, or Coze workflow definition JSON, converts them into deterministic `WorkflowIR`, detects static risks, proposes structured patches, and verifies whether changes are safe to accept. It does not execute workflows, read credentials, write back to n8n, Dify, or Coze, or trigger external side effects.
+OpenWorkflowDoctor is a Workflow Reliability IDE for existing workflow artifacts. The MVP reads exported n8n workflow JSON, optional read-only n8n workflow definitions, Dify DSL YAML, Coze workflow definition JSON, or Custom Graph JSON, converts them into deterministic `WorkflowIR`, detects static risks, proposes structured patches, and verifies whether changes are safe to accept. It does not execute workflows, read credentials, write back to n8n, Dify, Coze, or custom sources, or trigger external side effects.
+
+## v0.8 Adapter SDK / Source Adapter Framework
+
+v0.8 stabilizes the internal built-in adapter architecture. It is not a public plugin system and does not allow user-uploaded JavaScript adapters, remote adapter loading, adapter marketplaces, platform write-back, workflow execution, credential inspection, runtime plugin execution, or cloud sync.
+
+```text
+source artifact or read-only payload
+  -> built-in WorkflowSourceAdapter
+  -> shared guardrails and redaction
+  -> sanitized AdapterImportResult
+  -> WorkflowDocument
+  -> diagnostics, AI Explainer, AI Patch, Verifier, Human Review, Review Packet
+```
+
+The static registry contains `n8n.exportedJson`, `n8n.readonlyImport`, `dify.dslYaml`, `coze.definitionJson`, and `custom.graphJson`. Registry metadata drives the import menu, supported sources panel, source badges, capability labels, docs, and conformance coverage.
+
+Review Packets record sanitized adapter metadata: `adapterId`, `sourceKind`, `sourcePlatform`, `importMethod`, `stability`, source metadata, parser warnings, redaction summary, and source diagnostics. They do not include raw source artifacts, native platform patch output, secrets, raw prompts, raw code, raw SQL, credentials, or platform-importable patches.
 
 ## v0.7 Coze Workflow Definition Import Boundary
 

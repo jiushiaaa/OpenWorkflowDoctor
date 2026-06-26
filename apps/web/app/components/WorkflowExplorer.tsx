@@ -1,5 +1,6 @@
 import type { SampleWorkflowCatalogItem } from "../lib/sample-workflows";
 import type { Translator } from "../lib/i18n";
+import type { WorkflowSourceAdapter } from "@openworkflowdoctor/workflow-ir";
 
 export type WorkflowExplorerItem = {
   id: string;
@@ -15,6 +16,7 @@ export type WorkflowExplorerItem = {
 export function WorkflowExplorer({
   workflows,
   samples,
+  importableSources,
   t,
   onImportClick,
   onImportN8nClick,
@@ -23,8 +25,9 @@ export function WorkflowExplorer({
 }: {
   workflows: WorkflowExplorerItem[];
   samples: SampleWorkflowCatalogItem[];
+  importableSources: WorkflowSourceAdapter[];
   t: Translator;
-  onImportClick: () => void;
+  onImportClick: (adapterId?: string) => void;
   onImportN8nClick: () => void;
   onLoadSample: (sample: SampleWorkflowCatalogItem) => void;
   onSelectWorkflow: (workflowDocumentId: string) => void;
@@ -37,15 +40,11 @@ export function WorkflowExplorer({
           <strong>{t("explorer.title")}</strong>
         </div>
         <div className="workflow-explorer__actions">
-          <button type="button" onClick={onImportClick}>
-            {t("actions.importJson")}
-          </button>
-          <button type="button" onClick={onImportClick}>
-            {t("actions.importDifyDsl")}
-          </button>
-          <button type="button" onClick={onImportClick}>
-            {t("actions.importCozeDefinition")}
-          </button>
+          {importableSources.map((source) => (
+            <button key={source.adapterId} type="button" onClick={() => onImportClick(source.adapterId)}>
+              {source.label}
+            </button>
+          ))}
           <button type="button" onClick={onImportN8nClick}>
             {t("actions.importFromN8n")}
           </button>
@@ -64,8 +63,10 @@ export function WorkflowExplorer({
               >
                 <strong>{workflow.name}</strong>
                 {workflow.sourceKind === "n8n-readonly" ? <small>{t("explorer.n8nReadonly")}</small> : null}
+                {workflow.sourceKind === "n8n-exported-json" ? <small>n8n JSON</small> : null}
                 {workflow.sourceKind === "dify-dsl" ? <small>{t("explorer.difyDsl")}</small> : null}
                 {workflow.sourceKind === "coze-definition" ? <small>{t("explorer.cozeDefinition")}</small> : null}
+                {workflow.sourceKind === "custom-graph-json" ? <small>Custom Graph</small> : null}
                 <small>{workflow.statusLabel}</small>
                 <small>{workflow.humanReviewLabel}</small>
                 <small>{workflow.packetLabel}</small>

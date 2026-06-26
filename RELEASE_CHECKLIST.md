@@ -1,4 +1,4 @@
-# OpenWorkflowDoctor v0.7.0 Public Release Checklist
+# OpenWorkflowDoctor v0.8.0 Public Release Checklist
 
 Run these commands from the repository root before any public release commit:
 
@@ -14,39 +14,41 @@ docker compose up
 
 Expected result: every command exits with code 0. For `docker compose up`, verify the app opens locally, then stop it with `Ctrl+C`.
 
-## Public docs checks
+## Public Docs Checks
 
-- README names `v0.7.0` as the current release line.
-- README shows Docker Compose as the recommended public try-out path.
-- README keeps Node setup documented as contributor setup.
-- `docs/local-deployment.md` explains Docker, Node, and local data.
-- `docs/onboarding.md` explains Demo mode, n8n mode, AI skip, and trust boundaries.
-- `docs/troubleshooting.md` explains n8n checks, AI checks, and reset actions.
-- `docs/public-demo-checklist.md` covers the public demo gates.
-- `DEMO_SCRIPT.md` starts from onboarding and Docker.
-- GitHub Actions Docker Smoke must pass before tagging v0.7.0.
+- README names `v0.8.0` as the current release line.
+- README supported sources include n8n exported JSON, n8n read-only import, Dify DSL YAML, Coze definition JSON, and Custom Graph JSON.
+- `docs/adapter-sdk.md` documents the internal built-in adapter contract.
+- `docs/custom-graph-json-import.md` documents the safe declarative Custom Graph format.
+- `docs/source-adapter-conformance.md` documents shared conformance requirements.
+- `docs/architecture.md` describes the unified adapter import pipeline.
+- GitHub Actions Docker Smoke must pass before tagging v0.8.0.
 
-## v0.7.0 freeze checks
+## v0.8.0 Freeze Checks
 
-- Demo mode works without n8n.
-- Demo mode works without AI.
-- First-run onboarding can be reopened from Settings.
-- n8n import remains read-only.
-- Dify DSL YAML import remains the stable supported Dify path.
-- Dify direct import remains deferred and experimental only.
-- No Dify API connection, session/cookie handling, execution, publish, write-back, dataset fetch, plugin fetch, file fetch, or raw DSL persistence is introduced.
-- Coze Definition JSON import is manual `.json` upload only.
-- No Coze cloud connection, Coze API call, runtime workflow/chatflow call, execution, publish, write-back, credential inspection, resource fetch, or raw Coze JSON persistence is introduced.
-- Coze source metadata, parser warnings, redaction summary, and Coze diagnostics appear in WorkflowIR/Review Packet only after redaction.
-- Coze patch proposal/export remains WorkflowIR-only and never emits Coze-importable patched JSON.
-- n8n API keys remain session-only.
-- n8n requests keep using `excludePinnedData=true`.
-- Troubleshooting shows invalid n8n URL guidance.
-- Troubleshooting shows missing API key guidance.
-- Missing AI provider does not block deterministic diagnostics.
-- Reset confirmation lists removed and preserved local data before clearing.
-- AI Patch Proposal remains review-only and cannot mutate raw platform artifacts.
-- No docs imply hosted SaaS, workflow execution, write-back, credential inspection, cloud sync, or platform-importable patch export.
-- GitHub Actions `Docker Smoke` passes on a GitHub-hosted Linux runner.
+- Built-in adapter registry contains `n8n.exportedJson`, `n8n.readonlyImport`, `dify.dslYaml`, `coze.definitionJson`, and `custom.graphJson`.
+- File/manual imports use the unified import pipeline.
+- Raw imported source artifacts are not stored in Workflow Documents, IndexedDB workspace records, Review Packet artifacts, AI context, UI inspector state, logs, or snapshots.
+- Source metadata includes `adapterId`, `sourceKind`, `sourcePlatform`, `importMethod`, and `stability`.
+- Review Packets include sanitized adapter metadata, parser warnings, redaction summary, and source diagnostics.
+- Adapter conformance tests prove sentinel secrets do not leak into WorkflowIR, workspace state, Review Packets, or AI context.
+- Custom Graph JSON supports declarative `name`, `nodes`, `edges`, optional sanitized metadata, and optional config summaries.
+- Custom Graph JSON rejects malformed input and duplicate node ids.
+- Broken edges become diagnostics instead of crashes.
+- Unknown nodes do not crash import.
+- Patch proposals remain WorkflowIR previews for human review.
+
+## Non-goal Checks
+
+- No third-party executable adapters.
+- No adapter plugin marketplace.
+- No remote adapter loading.
+- No user-uploaded JavaScript adapters.
+- No workflow execution.
+- No platform write-back.
+- No n8n/Dify/Coze native patch export.
+- No credential inspection.
+- No runtime plugin execution.
+- No cloud sync.
 
 Do not tag a release until the release owner manually reviews the resulting repository state.

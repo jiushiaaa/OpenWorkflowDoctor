@@ -14,9 +14,11 @@ export type WorkflowDocumentSourceKind =
   | "imported-file"
   | "sample"
   | "migrated-v0.2"
+  | "n8n-exported-json"
   | "n8n-readonly"
   | "dify-dsl"
-  | "coze-definition";
+  | "coze-definition"
+  | "custom-graph-json";
 export type LatestReportState = "not-run" | "ready" | "stale";
 export type ReviewMode = "original" | "patched";
 export type WorkspaceConsoleTab = "summary" | "risks" | "ai" | "patch" | "verification" | "packet" | "logs";
@@ -157,9 +159,11 @@ const sourceKindSchema = z.enum([
   "imported-file",
   "sample",
   "migrated-v0.2",
+  "n8n-exported-json",
   "n8n-readonly",
   "dify-dsl",
-  "coze-definition"
+  "coze-definition",
+  "custom-graph-json"
 ]);
 const nodeTypeFamilySchema = z.enum(["known", "unknown"]);
 const parameterValueTypeSchema = z.enum(["array", "boolean", "null", "number", "object", "string", "unknown"]);
@@ -214,8 +218,11 @@ const workflowSourceDiagnosticSchema = z.object({
 }).strict();
 
 const workflowSourceMetadataSchema = z.object({
-  sourceKind: z.enum(["n8n-json", "n8n-readonly", "dify-dsl", "coze-definition"]),
-  sourcePlatform: z.string().min(1),
+  adapterId: z.string().min(1),
+  sourceKind: z.enum(["n8n-exported-json", "n8n-readonly", "dify-dsl", "coze-definition", "custom-graph-json"]),
+  sourcePlatform: z.enum(["n8n", "dify", "coze", "custom"]),
+  importMethod: z.enum(["file-upload", "read-only-connection", "manual-artifact", "sample"]),
+  stability: z.enum(["stable", "experimental", "best-effort"]),
   sourceVersion: z.string().min(1).optional(),
   sourceAppMode: z.string().min(1).optional(),
   sourceLabel: z.string().min(1).optional(),

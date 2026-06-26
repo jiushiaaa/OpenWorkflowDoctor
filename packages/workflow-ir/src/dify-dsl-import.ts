@@ -1,6 +1,11 @@
 import { parse as parseYaml } from "yaml";
 import { createParameterSummary, formatRedactedValue, REDACTED_PREVIEW } from "./redaction.js";
-import type { WorkflowSourceAdapter, WorkflowSourceAdapterInput } from "./workflow-source-adapter.js";
+import {
+  acceptsInputByExtensionAndMime,
+  createAdapterImportResult,
+  type WorkflowSourceAdapter,
+  type WorkflowSourceAdapterInput
+} from "./workflow-source-adapter.js";
 import type {
   EdgeIR,
   NodeIR,
@@ -45,21 +50,36 @@ const KNOWN_DIFY_NODE_TYPES = new Set([
 ]);
 
 export const difyDslSourceAdapter: WorkflowSourceAdapter = {
+  adapterId: "dify.dslYaml",
   id: "dify-dsl",
   label: "Dify DSL YAML",
   sourceKind: "dify-dsl",
-  acceptsFile(fileName) {
-    const lowerName = fileName.toLowerCase();
-    return lowerName.endsWith(".yml") || lowerName.endsWith(".yaml");
+  sourcePlatform: "dify",
+  importMethod: "file-upload",
+  stability: "stable",
+  acceptedInputs: {
+    extensions: [".yml", ".yaml"],
+    mimeTypes: ["application/x-yaml", "application/yaml", "text/yaml", "text/x-yaml", ""]
   },
-  parseToWorkflowIR(input) {
-    return importDifyDslWorkflow(input).workflow;
+  trustModel: "untrusted-user-artifact",
+  capabilities: ["file-upload", "source-diagnostics", "source-metadata", "review-packet-metadata"],
+  limits: {
+    maxFileBytes: MAX_DIFY_DSL_BYTES,
+    maxNodes: MAX_DIFY_NODE_COUNT,
+    maxEdges: MAX_DIFY_EDGE_COUNT,
+    maxNestedDepth: 64
   },
-  buildSourceMetadata(input) {
-    return importDifyDslWorkflow(input).metadata;
+  acceptsFile(fileName, mimeType) {
+    return acceptsInputByExtensionAndMime(this.acceptedInputs, fileName, mimeType);
   },
-  redactionSummary(input) {
-    return importDifyDslWorkflow(input).metadata.redactionSummary;
+  import(input) {
+    const imported = importDifyDslWorkflow(input);
+    return createAdapterImportResult({
+      adapter: this,
+      input,
+      workflowIR: imported.workflow,
+      sourceMetadata: imported.metadata
+    });
   }
 };
 
@@ -291,8 +311,11 @@ function buildMetadata({
   };
 
   return {
+    adapterId: "dify.dslYaml",
     sourceKind: "dify-dsl",
     sourcePlatform: "dify",
+    importMethod: "file-upload",
+    stability: "stable",
     ...(version ? { sourceVersion: version } : {}),
     ...(mode ? { sourceAppMode: mode } : {}),
     sourceLabel: input.fileName,

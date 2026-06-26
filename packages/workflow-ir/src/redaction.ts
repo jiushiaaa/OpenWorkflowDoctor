@@ -3,11 +3,11 @@ import type { NodeIR, NodeParameterSummary, ParameterValueType } from "./types.j
 export const REDACTED_PREVIEW = "[redacted]";
 
 const SENSITIVE_KEY_PATTERN =
-  /(^|[^a-z])(api[-_ ]?key|authorization|bearer|client[-_ ]?secret|credentials?|oauth|access[-_ ]?token|password|passphrase|private[-_ ]?key|refresh[-_ ]?token|secret|token|test[-_ ]?url|production[-_ ]?url|webhook[-_ ]?(id|path|url)|upload[-_ ]?file[-_ ]?id|uploaded[-_ ]?id|file[-_ ]?id|dataset[-_ ]?ids?|tenant[-_ ]?id|workspace[-_ ]?id|user[-_ ]?id|app[-_ ]?id|provider[-_ ]?credentials?)($|[^a-z])/i;
+  /(^|[^a-z])(api[-_ ]?key|authorization|bearer|client[-_ ]?secret|cookie|credentials?|oauth|access[-_ ]?token|password|passphrase|private[-_ ]?key|refresh[-_ ]?token|secret|token|raw[-_ ]?prompt|prompt|raw[-_ ]?code|code|raw[-_ ]?sql|sql|test[-_ ]?url|production[-_ ]?url|signed[-_ ]?url|webhook[-_ ]?(id|path|url)|upload[-_ ]?file[-_ ]?id|uploaded[-_ ]?id|file[-_ ]?id|dataset[-_ ]?ids?|plugin[-_ ]?ids?|tenant[-_ ]?id|workspace[-_ ]?id|user[-_ ]?id|org[-_ ]?id|organization[-_ ]?id|app[-_ ]?id|bot[-_ ]?id|provider[-_ ]?credentials?)($|[^a-z])/i;
 const SENSITIVE_QUERY_KEY_PATTERN =
-  /(^|[^a-z])(api[-_ ]?key|authorization|auth|client[-_ ]?secret|signature|access[-_ ]?token|refresh[-_ ]?token|secret|token)([^a-z]|$)/i;
+  /(^|[^a-z])(api[-_ ]?key|authorization|auth|client[-_ ]?secret|signature|signed|access[-_ ]?token|refresh[-_ ]?token|secret|token)([^a-z]|$)/i;
 const SENSITIVE_STRING_PATTERN =
-  /(bearer\s+[^\s,'"}\]]+|basic\s+[^\s,'"}\]]+|-----BEGIN [A-Z ]*PRIVATE KEY-----[\s\S]*?-----END [A-Z ]*PRIVATE KEY-----|(?:api[-_ ]?key|authorization|client[-_ ]?secret|oauth|access[-_ ]?token|password|private[-_ ]?key|refresh[-_ ]?token|secret|token)\s*[:=]\s*['"]?[^\s,'"}\]]+)/i;
+  /(bearer\s+[^\s,'"}\]]+|basic\s+[^\s,'"}\]]+|-----BEGIN [A-Z ]*PRIVATE KEY-----[\s\S]*?-----END [A-Z ]*PRIVATE KEY-----|(?:api[-_ ]?key|authorization|client[-_ ]?secret|cookie|oauth|access[-_ ]?token|password|private[-_ ]?key|refresh[-_ ]?token|secret|token)\s*[:=]\s*['"]?[^\s,'"}\]]+)/i;
 
 export function createParameterSummary(key: string, value: unknown): NodeParameterSummary {
   const redactedValue = redactSensitiveValue(key, value);
@@ -54,7 +54,7 @@ export function sanitizeForExport<T>(value: T): T {
 }
 
 export function redactSensitiveValue(key: string, value: unknown): unknown {
-  if (isSensitiveKey(key)) {
+  if (isSensitiveKey(key) && !isSafeDiagnosticCode(key, value)) {
     return REDACTED_PREVIEW;
   }
 
@@ -163,6 +163,15 @@ function isValueCarrierKey(key: string): boolean {
 
 function isSensitiveKey(key: string): boolean {
   return SENSITIVE_KEY_PATTERN.test(normalizeKey(key));
+}
+
+function isSafeDiagnosticCode(key: string, value: unknown): boolean {
+  return (
+    normalizeKey(key) === "code" &&
+    typeof value === "string" &&
+    /^[a-z0-9_.:-]+$/i.test(value) &&
+    /[_:.-]/.test(value)
+  );
 }
 
 function isSensitiveQueryKey(key: string): boolean {

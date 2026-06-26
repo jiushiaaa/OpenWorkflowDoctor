@@ -10,6 +10,8 @@ v0.4 introduces AI-assisted patch proposal generation. This is the first version
 
 The AI can propose reviewable `PatchOperation` objects. It cannot mutate raw n8n JSON, apply patches, verify patches, change human review, export an n8n-importable workflow, execute a workflow, or connect to production n8n.
 
+v0.8 adapter expansion does not change this boundary. AI Patch Proposal receives only sanitized WorkflowIR-derived context regardless of whether the source was n8n exported JSON, n8n read-only import, Dify DSL YAML, Coze definition JSON, or Custom Graph JSON. It still cannot emit platform-native patches or write back to any source platform.
+
 ## Assumptions
 
 - v0.4 extends the current v0.1 to v0.3.2 architecture instead of replacing it.

@@ -1,5 +1,12 @@
 import type { RefObject } from "react";
-import type { DoctorReport, HumanReviewDecision, VerificationStatus, WorkflowIR } from "@openworkflowdoctor/workflow-ir";
+import type {
+  DoctorReport,
+  HumanReviewDecision,
+  VerificationStatus,
+  WorkflowIR,
+  WorkflowSourceAdapter,
+  WorkflowSourceMetadata
+} from "@openworkflowdoctor/workflow-ir";
 import type { Translator } from "../lib/i18n";
 import type { SampleWorkflowCatalogItem } from "../lib/sample-workflows";
 import type { ReviewMode } from "../lib/workspace-store";
@@ -29,6 +36,8 @@ export function ReviewSteps({
   humanDecision,
   sourceKind,
   sourceLabel,
+  sourceMetadata,
+  supportedSources,
   t,
   onImportFile,
   onImportClick,
@@ -57,9 +66,11 @@ export function ReviewSteps({
   humanDecision: HumanReviewDecision;
   sourceKind?: string | undefined;
   sourceLabel?: string | undefined;
+  sourceMetadata?: WorkflowSourceMetadata | undefined;
+  supportedSources: WorkflowSourceAdapter[];
   t: Translator;
   onImportFile: (file: File | undefined) => void;
-  onImportClick: () => void;
+  onImportClick: (adapterId?: string) => void;
   onImportN8nClick: () => void;
   onLoadSample: (sample: SampleWorkflowCatalogItem) => void;
   onSelectWorkflow: (workflowDocumentId: string) => void;
@@ -80,6 +91,9 @@ export function ReviewSteps({
       <WorkflowExplorer
         workflows={workflows}
         samples={samples}
+        importableSources={supportedSources.filter((source) =>
+          source.capabilities.some((capability) => capability === "file-upload" || capability === "manual-artifact")
+        )}
         t={t}
         onImportClick={onImportClick}
         onImportN8nClick={onImportN8nClick}
@@ -92,28 +106,12 @@ export function ReviewSteps({
         <h2>{t("sidebar.reviewTarget")}</h2>
         <span>{t("sidebar.workflowName")}</span>
         <h1>{workflowInput?.name ?? (workspaceLoaded ? "OpenWorkflowDoctor" : t("workspace.loading"))}</h1>
-        {sourceKind === "n8n-readonly" ? (
+        {sourceMetadata ? (
           <div className="source-badge">
-            <strong>{t("explorer.n8nReadonly")}</strong>
+            <strong>{sourceMetadata.sourcePlatform} · {sourceMetadata.sourceKind}</strong>
             <span>{sourceLabel}</span>
-            <span>{t("explorer.localReviewCopy")}</span>
-            <span>{t("explorer.refreshMarksStale")}</span>
-          </div>
-        ) : null}
-        {sourceKind === "dify-dsl" ? (
-          <div className="source-badge">
-            <strong>{t("explorer.difyDsl")}</strong>
-            <span>{sourceLabel}</span>
-            <span>{t("explorer.localReviewCopy")}</span>
-            <span>{t("dify.warningBody")}</span>
-          </div>
-        ) : null}
-        {sourceKind === "coze-definition" ? (
-          <div className="source-badge">
-            <strong>{t("explorer.cozeDefinition")}</strong>
-            <span>{sourceLabel}</span>
-            <span>{t("explorer.localReviewCopy")}</span>
-            <span>{t("coze.warningBody")}</span>
+            <span>{sourceMetadata.importMethod} · {sourceMetadata.stability}</span>
+            <span>{t("source.patchPreviewBoundary")}</span>
           </div>
         ) : null}
         {!workflowInput ? (
@@ -189,9 +187,21 @@ export function ReviewSteps({
       {report ? (
         <section className="preview-note" aria-label={t("sidebar.previewTitle")}>
           <strong>{t("sidebar.previewTitle")}</strong>
-          <p>{t("sidebar.previewBody")}</p>
+          <p>{t("source.patchPreviewBoundary")}</p>
         </section>
       ) : null}
+
+      <section className="preview-note" aria-label={t("source.supportedSources")}>
+        <strong>{t("source.supportedSources")}</strong>
+        <ul className="compact-source-list">
+          {supportedSources.map((source) => (
+            <li key={source.adapterId}>
+              <span>{source.label}</span>
+              <small>{source.sourcePlatform} · {source.importMethod} · {source.stability}</small>
+            </li>
+          ))}
+        </ul>
+      </section>
     </aside>
   );
 }

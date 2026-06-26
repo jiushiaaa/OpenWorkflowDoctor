@@ -1,7 +1,11 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { importN8nReadonlyWorkflow as importN8nReadonlyPayload } from "@openworkflowdoctor/workflow-ir";
+import {
+  builtInWorkflowSourceAdapters,
+  importN8nReadonlyWorkflow as importN8nReadonlyPayload,
+  listImportableWorkflowSourceAdapters
+} from "@openworkflowdoctor/workflow-ir";
 import { CommandPalette } from "./components/CommandPalette";
 import { InspectorPanel } from "./components/InspectorPanel";
 import { OnboardingPanel } from "./components/OnboardingPanel";
@@ -104,6 +108,7 @@ export default function Home() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [settingsTestStatus, setSettingsTestStatus] = useState<SettingsTestStatus>("idle");
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
+  const [pendingFileImportAdapterId, setPendingFileImportAdapterId] = useState<string | undefined>(undefined);
   const t = useMemo(() => createTranslator(settings.language), [settings.language]);
   const aiProviderStatus = getAiProviderStatus(settings.ai);
   const resolvedTheme = settings.theme === "system" ? systemTheme : settings.theme;
@@ -123,6 +128,7 @@ export default function Home() {
       }),
     [settings.ai, settingsTestStatus]
   );
+  const importableAdapters = useMemo(() => listImportableWorkflowSourceAdapters(), []);
   const resetEntireWorkspacePlan = useMemo(() => buildResetActionPlan("entire-workspace"), []);
 
   const workspace = useWorkspaceController({
@@ -173,30 +179,12 @@ export default function Home() {
     t
   });
   const commandItems: CommandItem[] = [
-    {
-      label: t("actions.importJson"),
-      hint: t("command.importHint"),
+    ...importableAdapters.map((adapter) => ({
+      label: `${t("actions.importSource")} ${adapter.label}`,
+      hint: `${adapter.importMethod} · ${adapter.stability}`,
       disabled: false,
-      action: () => {
-        fileInputRef.current?.click();
-      }
-    },
-    {
-      label: t("actions.importDifyDsl"),
-      hint: t("command.importDifyHint"),
-      disabled: false,
-      action: () => {
-        fileInputRef.current?.click();
-      }
-    },
-    {
-      label: t("actions.importCozeDefinition"),
-      hint: t("command.importCozeHint"),
-      disabled: false,
-      action: () => {
-        fileInputRef.current?.click();
-      }
-    },
+      action: () => handleOpenFileImport(adapter.adapterId)
+    })),
     {
       label: t("actions.importFromN8n"),
       hint: t("command.importN8nHint"),
@@ -531,7 +519,7 @@ export default function Home() {
 
   function handlePrimaryAction() {
     if (!doctor.workflowInput) {
-      fileInputRef.current?.click();
+      handleOpenFileImport("n8n.exportedJson");
       return;
     }
 
@@ -553,8 +541,14 @@ export default function Home() {
     doctor.updateActiveTab("verification");
   }
 
+  function handleOpenFileImport(adapterId = "n8n.exportedJson") {
+    setPendingFileImportAdapterId(adapterId);
+    fileInputRef.current?.click();
+  }
+
   async function handleImportWorkflowFile(file: File | undefined) {
-    await workspace.importWorkflow(file);
+    await workspace.importWorkflow(file, pendingFileImportAdapterId);
+    setPendingFileImportAdapterId(undefined);
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
@@ -647,9 +641,11 @@ export default function Home() {
         humanDecision={doctor.humanDecision}
         sourceKind={workspace.activeDocument?.sourceKind}
         sourceLabel={workspace.activeDocument?.sourceLabel}
+        sourceMetadata={workspace.activeDocument?.sourceMetadata}
+        supportedSources={builtInWorkflowSourceAdapters}
         t={t}
         onImportFile={(file) => void handleImportWorkflowFile(file)}
-        onImportClick={() => fileInputRef.current?.click()}
+        onImportClick={handleOpenFileImport}
         onImportN8nClick={() => setIsN8nImportOpen(true)}
         onLoadSample={(sample) => void workspace.loadSampleWorkflow(sample)}
         onSelectWorkflow={(workflowDocumentId) => void workspace.selectWorkflowDocument(workflowDocumentId)}

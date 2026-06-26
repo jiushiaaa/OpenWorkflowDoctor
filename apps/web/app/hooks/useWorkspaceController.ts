@@ -1,10 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
-  cozeDefinitionSourceAdapter,
   createDoctorReportFromWorkflow,
-  difyDslSourceAdapter,
-  importCozeDefinitionWorkflow,
-  importDifyDslWorkflow,
+  importWorkflowSourceArtifact,
   parseN8nWorkflow
 } from "@openworkflowdoctor/workflow-ir";
 import type { SampleWorkflowCatalogItem } from "../lib/sample-workflows";
@@ -72,7 +69,7 @@ export function useWorkspaceController({ onWorkspaceChanged }: { onWorkspaceChan
     });
   }, [activeDocument]);
 
-  const importWorkflow = useCallback(async (file: File | undefined) => {
+  const importWorkflow = useCallback(async (file: File | undefined, adapterId?: string) => {
     if (!file) {
       return;
     }
@@ -83,26 +80,17 @@ export function useWorkspaceController({ onWorkspaceChanged }: { onWorkspaceChan
         throw new Error("Local workspace storage is not ready.");
       }
       const text = await file.text();
-      const difyAccepted = difyDslSourceAdapter.acceptsFile(file.name, file.type);
-      const importedDify = difyAccepted
-        ? importDifyDslWorkflow({
-            fileName: file.name,
-            mimeType: file.type,
-            content: text
-          })
-        : null;
-      const importedCoze = importedDify ? null : tryImportCozeDefinition({
+      const imported = importWorkflowSourceArtifact({
+        ...(adapterId ? { adapterId } : {}),
         fileName: file.name,
         mimeType: file.type,
         content: text
       });
-      const parsedWorkflow = importedDify?.workflow ?? importedCoze?.workflow ?? parseN8nWorkflow(JSON.parse(text) as unknown);
       const document = createWorkflowDocumentFromWorkflowIr({
-        workflow: parsedWorkflow,
-        sourceKind: importedDify ? "dify-dsl" : importedCoze ? "coze-definition" : "imported-file",
+        workflow: imported.workflowIR,
+        sourceKind: imported.sourceMetadata.sourceKind,
         sourceLabel: file.name,
-        ...(importedDify ? { sourceMetadata: importedDify.metadata } : {}),
-        ...(importedCoze ? { sourceMetadata: importedCoze.metadata } : {})
+        sourceMetadata: imported.sourceMetadata
       });
 
       await repository.saveWorkflowDocument(document);
@@ -298,19 +286,4 @@ export function useWorkspaceController({ onWorkspaceChanged }: { onWorkspaceChan
     saveReviewPacketArtifact,
     clearWorkspaceData
   };
-}
-
-function tryImportCozeDefinition(input: { fileName: string; mimeType?: string; content: string }) {
-  if (!cozeDefinitionSourceAdapter.acceptsFile(input.fileName, input.mimeType)) {
-    return null;
-  }
-
-  try {
-    return importCozeDefinitionWorkflow(input);
-  } catch (error) {
-    if (error instanceof Error && error.message === "Coze definition JSON must include nodes and edges arrays.") {
-      return null;
-    }
-    throw error;
-  }
 }
